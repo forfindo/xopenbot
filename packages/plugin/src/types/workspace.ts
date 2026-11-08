@@ -1,6 +1,8 @@
 import type { Part } from '@/types/message-part';
+import type { Bot } from '@xopenbot/onebot';
 
 type MaybePromise<T> = T | Promise<T>;
+type None = void | undefined | null;
 
 export interface PluginInfo {
   name: string;
@@ -25,14 +27,10 @@ export interface Command {
   name: string;
   pattern: string | RegExp;
   priority: number;
-  execute: (
-    input: string,
-    ctx: PluginContext,
-    args?: string[]
-  ) => MaybePromise<ExecResult | undefined>;
+  execute: (input: string, ctx: PluginContext, args?: string[]) => MaybePromise<ExecResult | None>;
 }
 
-export type ListenerCallback = (ctx: PluginContext) => MaybePromise<void>;
+export type ListenerCallback = (ctx: PluginContext) => MaybePromise<None>;
 
 export interface IPlugin {
   info: PluginInfo;
@@ -48,7 +46,7 @@ export interface IPlugin {
 
 export interface PluginContext {
   logger: LikeLogger;
-  bot: unknown;
+  bot: Bot;
   state: Record<string, unknown>;
   [key: string]: unknown;
 }
