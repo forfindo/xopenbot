@@ -94,10 +94,16 @@ if (fs.existsSync(fnFile)) {
   >;
   const restoreFunctions = (o: Record<string, unknown>, name: string) => {
     for (const k in o) {
-      const key = name + `["${k}"]`;
+      const key = name + `[${JSON.stringify(k)}]`;
       if (typeof o[k] === 'string') {
         try {
-          vm.runInContext(`${key}=` + o[k], context);
+          vm.runInContext(
+            `(${key}=((v)=>{` +
+              `if(typeof v==='function'&&v.name==='')` +
+              `Object.defineProperty(v,'name',{value:${JSON.stringify(k)},configurable:true});` +
+              `return v;})(${o[k]}))`,
+            context
+          );
         } catch (_) {
           /* empty */
         }

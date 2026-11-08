@@ -211,7 +211,7 @@ const asyncCallback = (
 const checkAndAddAsyncQueue = (env: DataType): AsyncTask => {
   const { key, state } = getQueueState(env);
   const depth = state.current === null ? 0 : state.current + 1;
-  if (depth > MAX_ASYNC_DEPTH) {
+  if (depth >= MAX_ASYNC_DEPTH) {
     throw new Error('判定为递归调用，中断。');
   }
   const id = ++task_seq;
