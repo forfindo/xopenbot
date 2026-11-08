@@ -98,10 +98,10 @@ if (fs.existsSync(fnFile)) {
       if (typeof o[k] === 'string') {
         try {
           vm.runInContext(
-            `(${key}=((v)=>{` +
+            `${key}=((v)=>{` +
               `if(typeof v==='function'&&v.name==='')` +
               `Object.defineProperty(v,'name',{value:${JSON.stringify(k)},configurable:true});` +
-              `return v;})(${o[k]}))`,
+              `return v;})(${o[k]})`,
             context
           );
         } catch (_) {
