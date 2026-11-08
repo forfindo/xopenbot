@@ -173,13 +173,23 @@ const internalProperties = [
   'isNaN',
   'SharedArrayBuffer',
   'Atomics',
-  'WebAssembly'
+  'WebAssembly',
+  'Iterator',
+  'AggregateError',
+  'FinalizationRegistry',
+  'WeakRef',
+  'SuppressedError',
+  'DisposableStack',
+  'AsyncDisposableStack',
+  'Float16Array'
 ];
 for (const v of internalProperties) {
   vm.runInContext(
-    `this.Object.freeze(this.${v})
-this.Object.freeze(this.${v}.prototype)
-const ${v} = this.${v}`,
+    `if (this.${v}) {
+  this.Object.freeze(this.${v});
+  this.Object.freeze(this.${v}.prototype);
+  const ${v} = this.${v};
+}`,
     context
   );
 }
@@ -187,6 +197,15 @@ initFinished = true;
 
 vm.runInContext(`try{this.afterInit()}catch(e){}`, context);
 
+/**
+ * context初始属性来源：
+ * 1. vm上下文内置属性
+ * 2. include方法
+ * 3. getContext方法
+ * 4. 初始化脚本
+ * 5. 本文件内直接context
+ * 6. addContext方法
+ */
 // 外部导入模块
 const outerImport = [
   'setTimeout',
@@ -207,14 +226,17 @@ const outerImport = [
 let fn: Record<string, unknown>;
 const saveFunctions = (o: Record<string, unknown>, mp: Record<string, unknown>) => {
   for (const k in o) {
-    if ((internalProperties.includes(k) || outerImport.includes(k)) && o[k] === context[k]) {
+    if (outerImport.includes(k) && o[k] === context[k]) {
       continue;
     }
     if (typeof o[k] === 'function') {
       mp[k] = o[k].toString();
     } else if (typeof o[k] === 'object' && o[k] !== null) {
-      mp[k] = {};
-      saveFunctions(o[k] as Record<string, unknown>, mp[k] as Record<string, unknown>);
+      const tmp = {};
+      saveFunctions(o[k] as Record<string, unknown>, tmp);
+      if (Object.keys(tmp).length > 0) {
+        mp[k] = tmp;
+      }
     } else if (typeof o[k] === 'bigint') {
       o[k] = Number(o[k]);
     }
