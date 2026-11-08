@@ -117,7 +117,7 @@ const normalize = (
   }
   // @ts-ignore
   result.self?.user_id && (result.self.user_id = String(result.self.user_id));
-  /* eslint-enabled */
+  /* eslint-enable */
   return result as unknown as MessageEvent | NoticeEvent | RequestEvent;
 };
 

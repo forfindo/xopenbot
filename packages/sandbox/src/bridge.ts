@@ -89,7 +89,7 @@ interface TimerEntry {
 }
 
 const TIMEOUT_MAX = 2 ** 31 - 1;
-const MAX_ASYNC_DEPTH = 5;
+const MAX_ASYNC_DEPTH = 7;
 const DEFAULT_REQUEST_TIMEOUT = 30000;
 const async_queue: Record<string, AsyncQueueState> = {};
 const timers = new Map<number, TimerEntry>();
@@ -157,7 +157,7 @@ const filter = (msg: string) => {
 
 const asyncCallback = (
   task: AsyncTask,
-  callback: (...args: unknown[]) => void,
+  callback: (...args: unknown[]) => unknown,
   argv?: unknown[]
 ) => {
   const { id, key, env } = task;
@@ -171,14 +171,15 @@ const asyncCallback = (
   const function_name = `tmp_${Date.now()}_${id}`;
   sandbox.getContext()[function_name] = callback;
   let argv_name: string | undefined;
+  let result = null;
   try {
     sandbox.setEnv(env);
     if (argv === void 0) {
-      sandbox.exec(`this.${function_name}.apply(this)`);
+      result = sandbox.exec(`this.${function_name}.apply(this)`);
     } else {
       argv_name = `tmp_argv_${Date.now()}_${id}`;
       sandbox.getContext()[argv_name] = argv;
-      sandbox.exec(`this.${function_name}.apply(this, this.${argv_name})`);
+      result = sandbox.exec(`this.${function_name}.apply(this, this.${argv_name})`);
     }
   } catch (_) {
     /* empty */
@@ -204,6 +205,7 @@ const asyncCallback = (
       }
     }
   }
+  return result;
 };
 
 const checkAndAddAsyncQueue = (env: DataType): AsyncTask => {
