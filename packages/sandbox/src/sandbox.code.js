@@ -118,19 +118,20 @@ Object.defineProperty(this, 'set_history', {
   writable: false,
   value: this.set_history
 });
+// 内部临时变量不记录历史
 Object.defineProperty(this, 'record_set_history', {
   configurable: false,
   enumerable: false,
   writable: false,
   value: k => {
-    if (k !== 'data' && this.data.user_id) {
+    if (k !== 'data' && this.data.user_id && !(typeof k === 'string' && k.startsWith('tmp_'))) {
       try {
         this.set_history[k] = {
           uid: this.data.user_id,
-          name: this.data.sender?.nickname || 'unknown',
+          name: this.data.sender?.nickname,
           group: this.data.group_id,
-          gname: this.data.group_name || 'unknown',
-          card: this.data.group_id ? this.data.sender?.card || 'unknown' : undefined,
+          gname: this.data.group_name,
+          card: this.data.group_id ? this.data.sender?.card : undefined,
           time: Date.now()
         };
       } catch (e) {}

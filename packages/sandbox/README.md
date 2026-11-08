@@ -90,26 +90,24 @@ VM 上下文 (sandbox.ts + sandbox.code.js)
 
 #### 异步任务递归检测：`checkAndAddAsyncQueue`
 
-`bridge.ts` 用于防止用户通过回调反复发起异步任务形成「无限递归」。任务按 `self.user_id`、`group_id`、`user_id` 组成的队列隔离，并记录任务的结束时间：
+`bridge.ts` 用于防止用户通过回调反复发起异步任务形成「无限递归」。任务按 `self.user_id`、`group_id`、`user_id` 组成的队列隔离，并用「代际深度」描述异步延续链：
 
-- 登记任务时写入一条 `end_time` 为空的记录；
-- 回调执行完成后由 `asyncCallback` 写入 `end_time`；
-- 已结束超过 500ms 的记录会被清理，仍在进行中的任务会维持队列的 `start_moment`；
-- 若同一队列连续繁忙超过 60 秒，抛出 `判定为递归调用，中断。` 并重置 `start_moment`。
+- `checkAndAddAsyncQueue(env)` 登记任务时，深度取队列当前深度 + 1（无正在执行的回调时为 0）；任务以自增 id 存入队列，并返回 `{ id, key, depth, env }`；
+- 回调触发时由 `asyncCallback` 把队列深度置为该任务的深度，回调结束后再还原，因此回调内再调度的任务深度会继续 +1；
+- 深度超过 `MAX_ASYNC_DEPTH`（5）时抛出 `判定为递归调用，中断。`，用于阻断回调内的无限自我续期；
+- 任务执行完毕（或被 `clearTimeout` 取消）后从队列移除，队列为空时自动清理；
+- 由新的 QQ 事件触发的任务深度总是从 0 开始，因此该检测只约束「同一回调链」，跨事件的自激由 `checkFrequency` 兜底。
 
 #### `setTimeout` 限制
 
-`setTimeout` 不参与上面的繁忙窗口检测，改用独立的任务计数和句柄管理：
-
-- 返回自增数字 id，不再向沙箱暴露宿主 `Timeout` 对象；`clearTimeout` 接收这个 id；
+- 返回自增数字 id，不向沙箱暴露宿主 `Timeout` 对象；`clearTimeout` 接收这个数字 id（传入其他值抛 `TypeError`）；
 - 延迟必须在 5000ms 到 `2^31 - 1` 之间；
-- 同一条消息（事件）累计最多调度 3 个 timer，包含回调中再次调度以及被 `clearTimeout` 的调用，超限抛出 `setTimeout调用次数达到上限`，用于防止单条消息无限递归调度；
-- 每个会话最多 64 个、全局最多 1024 个活跃 timer；
-- timer 触发或被 `clearTimeout` 只释放「活跃」计数；「累计调用」计数在该事件生命周期内不会重置，直到同一会话出现新事件才清理，因此每个事件最多调度 3 次。
+- 与其他异步能力共用 `checkFrequency` 频率限制；
+- 与 `fetch` 共用上面的递归检测：回调内反复 `setTimeout` 会累计深度，超过 5 代即中断（即不支持回调内无限轮询，周期任务应由新的 QQ 事件驱动）。
 
 此外还有：
 
-- HTTP 响应体限制 500KB，避免内存耗尽；
+- `fetch` 默认 30 秒超时，HTTP 响应体限制 500KB，避免内存耗尽；
 - 输出内容经过敏感词过滤。
 
 ## 阻止逃逸的方法
