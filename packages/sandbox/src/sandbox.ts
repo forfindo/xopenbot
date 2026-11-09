@@ -226,7 +226,7 @@ const outerImport = [
 let fn: Record<string, unknown>;
 const saveFunctions = (o: Record<string, unknown>, mp: Record<string, unknown>) => {
   for (const k in o) {
-    if (outerImport.includes(k) && o[k] === context[k]) {
+    if ((outerImport.includes(k) || k.startsWith('tmp_')) && o[k] === context[k]) {
       continue;
     }
     if (typeof o[k] === 'function') {
@@ -244,7 +244,7 @@ const saveFunctions = (o: Record<string, unknown>, mp: Record<string, unknown>) 
 };
 const stringifyContext = () => {
   return JSON.stringify(context, (key, value: unknown) => {
-    if (outerImport.includes(key) && context[key] === value) {
+    if ((outerImport.includes(key) || key.startsWith('tmp_')) && context[key] === value) {
       return void 0;
     }
     return value;

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc && node --input-type=module -e \"import fs from 'node:fs'; fs.copyFileSync('src/sandbox.code.js','dist/sandbox.code.js')\"",
+    "build": "tsc -p tsconfig.build.json && node --input-type=module -e \"import fs from 'node:fs'; fs.copyFileSync('src/sandbox.code.js','dist/sandbox.code.js')\"",
     "tarball": "pnpm build & pnpm pack",
     "prepublishOnly": "pnpm build"
   },
