@@ -31,6 +31,7 @@ export interface InitEvent {
 type CheckCallApi = { method: StandardAPI; params: unknown[] };
 type CallApiResponse = { echo: string; data: unknown };
 type DataType = MessageEvent | NoticeEvent | RequestEvent;
+type FetchCallback = (res: unknown) => void;
 
 type OnMessageEvent =
   | SaveContextEvent
@@ -39,6 +40,8 @@ type OnMessageEvent =
   | NoticeEvent
   | RequestEvent
   | CallApiResponse;
+
+const NoneFunction = () => {};
 
 const stringify_config = stringify.configure({
   pure: false,
@@ -457,31 +460,76 @@ sandbox.include('clearTimeout', function (id: unknown) {
   releaseTimer(id);
 });
 
+/**
+ * fetch API 使用方法。
+ *
+ * 回调参数：成功时为响应体(string | Buffer)；失败时为 Error；
+ * 非 2xx 状态码时为响应头对象(含 `status-code` 字段)。
+ *
+ * 四个入口的区别：
+ * - `fetch(url, place?, callback?)`：默认 GET，`place` 可传 RequestOptions
+ *   (method/headers/timeout 等) 或直接传回调，最终转调 `request`。
+ * - `fetch.get(url, headers?, callback?)`：GET 语法糖，第二参数是请求头或回调。
+ * - `fetch.post(url, body?, headers?, callback?)`：POST 语法糖，第二参数是请求体，
+ *   第三参数是请求头或回调。
+ * - `fetch.request(url, options, callback)`：最底层的通用方法，必须显式传 options
+ *   (含 method/headers/body/timeout)，get/post/fetch 内部都调用它。
+ * 注：`Object.assign(fetch, temp)` 使 fetch 同时拥有 get/post/request。
+ *
+ * 注意事项：
+ * - body 默认按 JSON 序列化，content-type 非 application/json 时原样发送。
+ * - 响应内容上限 500KB；超时默认 DEFAULT_REQUEST_TIMEOUT，最大 TIMEOUT_MAX。
+ * - 省略回调时请求照常发出，但不处理结果。
+ *
+ * @example
+ * // GET
+ * fetch('https://example.com/api');
+ * fetch('https://example.com/api', { headers: { 'user-agent': 'bot' } });
+ * fetch.get('https://example.com/api', { accept: 'application/json' }, res => {});
+ *
+ * @example
+ * // POST
+ * fetch.post('https://example.com/api', { key: 'value' });
+ * fetch.post('https://example.com/api', { key: 'value' }, { 'content-type': 'application/json' }, res => {});
+ *
+ * @example
+ * // 自定义请求(支持 method / headers / timeout 等 RequestOptions)
+ * fetch.request('https://example.com/api', {
+ *   method: 'put',
+ *   headers: { 'content-type': 'application/json' },
+ *   timeout: 10000,
+ *   body: { key: 'value' }
+ * }, res => {});
+ */
 const temp = {
-  get: function (url: string, callback = () => {}, headers?: http.OutgoingHttpHeaders) {
-    const params = {
+  get: function (
+    url: string,
+    place?: http.OutgoingHttpHeaders | FetchCallback,
+    callback?: FetchCallback
+  ) {
+    const options = {
       method: 'get',
-      headers: headers
+      headers: typeof place !== 'function' && place ? place : {}
     };
-    temp.request(url, params, callback);
+    temp.request(url, options, callback ?? (typeof place === 'function' ? place : NoneFunction));
   },
   post: function (
     url: string,
-    body: unknown,
-    callback = () => {},
-    headers?: http.OutgoingHttpHeaders
+    body?: unknown,
+    place?: http.OutgoingHttpHeaders | FetchCallback,
+    callback?: FetchCallback
   ) {
-    const params = {
+    const options = {
       method: 'post',
       body: body,
-      headers: headers
+      headers: typeof place !== 'function' && place ? place : {}
     };
-    temp.request(url, params, callback);
+    temp.request(url, options, callback ?? (typeof place === 'function' ? place : NoneFunction));
   },
   request: function (
     url: string,
-    params: http.RequestOptions & { body?: unknown },
-    callback = () => {}
+    options: http.RequestOptions & { body?: unknown },
+    callback: FetchCallback = NoneFunction
   ) {
     if (typeof url !== 'string') {
       throw new TypeError('url(第一个参数)必须是字符串。');
@@ -489,21 +537,25 @@ const temp = {
     if (typeof callback !== 'function') {
       throw new TypeError('callback(第三个参数)必须是函数。');
     }
-    if (typeof params !== 'object' || params === null) {
+    if (typeof options !== 'object' || options === null) {
       throw new TypeError('params(第二个参数)必须是对象。');
     }
     url = url.trim();
     const protocol = url.substring(0, 5) === 'https' ? https : http;
     const data: Uint8Array<ArrayBufferLike>[] = [];
     let size = 0;
-    const options = params;
     if (!options.headers) {
       options.headers = {};
     }
     if (Array.isArray(options.headers)) {
       throw new TypeError('headers 不支持数组形式。');
     }
-    const headers = options.headers as OutgoingHttpHeaders;
+    const rawHeaders = options.headers as OutgoingHttpHeaders;
+    const headers: OutgoingHttpHeaders = {};
+    for (const key of Object.keys(rawHeaders)) {
+      headers[key.toLowerCase()] = rawHeaders[key];
+    }
+    options.headers = headers;
     Object.assign(headers, { 'accept-encoding': 'gzip' });
     const body = options?.body;
     delete options.body;
@@ -550,7 +602,7 @@ const temp = {
           if (res.headers['content-encoding'] && res.headers['content-encoding'].includes('gzip')) {
             try {
               zlib.gunzip(Buffer.concat(data), (err, buffer) => {
-                cb(err ? JSON.stringify(err) : buffer.toString());
+                cb(err ?? buffer.toString());
               });
             } catch {
               /* empty */
@@ -579,8 +631,20 @@ const temp = {
     }
   }
 };
-const fetch = function (url: string, callback = () => {}, headers?: http.OutgoingHttpHeaders) {
-  return temp.get(url, callback, headers);
+const fetch = function (
+  url: string,
+  place?: http.RequestOptions | FetchCallback,
+  callback?: FetchCallback
+) {
+  const options = {
+    method: 'get',
+    ...(typeof place !== 'function' && place ? place : {})
+  } satisfies http.RequestOptions;
+  return temp.request(
+    url,
+    options,
+    callback ?? (typeof place === 'function' ? place : NoneFunction)
+  );
 };
 Object.assign(fetch, temp);
 sandbox.include('fetch', fetch);

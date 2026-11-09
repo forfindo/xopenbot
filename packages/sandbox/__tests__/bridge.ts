@@ -1,10 +1,30 @@
 import cp from 'child_process';
+import vm from 'vm';
 import type { MessageEvent } from '@xopenbot/onebot';
 
-// 还原context函数名称丢失
 const worker = cp.fork('../src/bridge.js');
 
+let buffer = '';
+
+const isComplete = (code: string) => {
+  try {
+    new vm.Script(code);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 process.stdin.on('data', data => {
+  buffer += data.toString();
+
+  if (!buffer.endsWith('\n') || !isComplete(buffer)) {
+    return;
+  }
+
+  const text = buffer.replace(/\r?\n$/, '');
+  buffer = '';
+
   const id = Math.random().toString(36);
   worker.send({
     id: id,
@@ -14,11 +34,11 @@ process.stdin.on('data', data => {
       {
         type: 'text',
         data: {
-          text: data.toString()
+          text
         }
       }
     ],
-    alt_message: data.toString(),
+    alt_message: text,
     self: {
       user_id: '12456464',
       platform: 'qq'
@@ -33,7 +53,12 @@ worker.on('message', data => {
   // @ts-ignore
   if (data.type === 'exec/result') {
     // @ts-ignore
-    console.log(data.data);
+    if (!data.data) {
+      return;
+    }
+    // @ts-ignore
+    // eslint-disable-next-line
+    console.log(data.data.map(item => item.data.text).join(''));
     // @ts-ignore
     if (JSON.stringify(data.data).includes('saveCtx')) {
       worker.send({
