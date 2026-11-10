@@ -21,6 +21,8 @@ export interface Config {
   dataPath?: string;
   /** 判断是否主人 **/
   master: string[];
+  /** 拓展的机器人API，放在$下，传API名称或者函数，忽略不带名称的函数 **/
+  botAPI?: (string | ((...args: unknown[]) => unknown))[];
 }
 
 type WorkEvent = CallApiRequest | ExecResponse;

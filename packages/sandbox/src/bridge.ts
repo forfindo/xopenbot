@@ -28,7 +28,7 @@ export interface InitEvent {
   value: Config;
 }
 
-type CheckCallApi = { method: StandardAPI; params: unknown[] };
+type CheckCallApi = { method: StandardAPI | (string & {}); params: unknown[] };
 type CallApiResponse = { echo: string; data: unknown };
 type DataType = MessageEvent | NoticeEvent | RequestEvent;
 type FetchCallback = (res: unknown) => void;
@@ -257,7 +257,7 @@ const precheck = function (caller: CheckCallApi) {
   };`);
 };
 
-const callApi = (method: StandardAPI, params: unknown[] = [], check = true) => {
+const callApi = (method: StandardAPI | (string & {}), params: unknown[] = [], check = true) => {
   if (check) {
     precheck({ method, params });
   }
@@ -644,12 +644,14 @@ const $ = {
   },
   sendDiscussMsg: (id: string, msg: string) => {
     msg = filter(msg) || '';
+    id = String(id);
     if (!msg) {
       return;
     }
     callApi('sendMessage', ['channel', id, fromCQCode(msg)]).catch(() => {});
   },
   deleteMsg: (message_id: string) => {
+    message_id = String(message_id);
     callApi('deleteMessage', [message_id]).catch(() => {});
   },
   // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -657,7 +659,6 @@ const $ = {
   // eslint-disable-next-line @typescript-eslint/unbound-method
   get: temp.get
 };
-sandbox.include('$', $);
 
 process.on('disconnect', () => process.exit());
 process.on('message', (value: OnMessageEvent) => {
@@ -671,6 +672,20 @@ process.on('message', (value: OnMessageEvent) => {
     if (config.dataPath) {
       process.env.dataPath = config.dataPath;
     }
+    config.botAPI?.forEach(item => {
+      if (typeof item === 'string') {
+        // @ts-ignore
+        $[item] = (...args: unknown[]) => {
+          callApi(item, args).catch(() => {});
+        };
+      } else if (typeof item === 'function' && item.name) {
+        // @ts-ignore
+        $[item.name] = (...args: unknown[]) => {
+          callApi(item.name, args).catch(() => {});
+        };
+      }
+    });
+    sandbox.include('$', $);
     return;
   }
   if (!('type' in value) && 'echo' in value) {
