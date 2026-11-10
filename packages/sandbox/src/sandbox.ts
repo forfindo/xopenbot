@@ -219,6 +219,7 @@ const outerImport = [
   'os',
   'Buffer',
   '$',
+  'msg2cq',
   'error403'
 ];
 

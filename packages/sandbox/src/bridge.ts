@@ -5,7 +5,7 @@ import {
   type RequestEvent,
   type GroupMemberInfo,
   type StandardAPI,
-  toCQCode,
+  toCQCode as msg2cq,
   fromCQCode,
   type GroupInfo
 } from '@xopenbot/onebot';
@@ -222,28 +222,6 @@ const checkAndAddAsyncQueue = (env: DataType): AsyncTask => {
   return { id, key, depth, env };
 };
 
-/**
- * @param msg 待处理的cq码
- */
-const toStr = (msg: string) => {
-  let str = '';
-  let cnt = 0;
-  for (const char of msg) {
-    if (char === '`') {
-      if (cnt === 0) {
-        str += '"`';
-        cnt += 1;
-      } else {
-        str += '`"';
-        cnt -= 1;
-      }
-    } else {
-      str += char;
-    }
-  }
-  return str;
-};
-
 const checkFrequency = () => {
   const uid = sandbox.getContext().data?.user_id as string;
   if (!uid) {
@@ -339,46 +317,18 @@ const onmessage = async (data: DataType) => {
     ) {
       return callApi('leaveGroup', [data.group_id], false);
     }
+    // vm只处理文本
     let message = '';
     for (const v of data.message) {
       if (v.type === 'text') {
         message += v.data.text;
-      } else if (v.type === 'mention') {
-        if (v.data.user_id == data.self.user_id && !message) {
-          continue;
-        }
-        message += `'[CQ:mention,user_id=${v.data.user_id}]'`;
-      } else if (v.type === 'mention_all') {
-        message += `'[CQ:mention_all]'`;
-      } else {
-        message += toCQCode(v);
       }
     }
     message = message.trim();
-    data.msg = message;
     sandbox.setEnv(data);
-    const str = message
-      .match(/```[\s\S]*```/)?.[0]
-      .replace(/```/g, '')
-      .trim();
-    if (str) {
-      message = message.replace(/```[\s\S]*```/, JSON.stringify(str));
-    } else if (
-      !message.includes('return') &&
-      message.includes('`') &&
-      /\[CQ:[^\]]+\]/.test(message)
-    ) {
-      message = toStr(message);
-    }
     let echo = true;
     try {
       let res = sandbox.run(message);
-      if (typeof res === 'string' && res.includes('`') && /\[CQ:[^\]]+\]/.test(res)) {
-        res = sandbox.run(res);
-      }
-      if (message.match(/^['"`]\[CQ:mention,user_id=\d+\]['"`]$/)) {
-        echo = false;
-      }
       if (res === null && message === 'null') {
         echo = false;
       }
@@ -424,6 +374,8 @@ const onmessage = async (data: DataType) => {
     /* empty */
   }
 };
+
+sandbox.include('msg2cq', msg2cq);
 
 sandbox.include(
   'setTimeout',

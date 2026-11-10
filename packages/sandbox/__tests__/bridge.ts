@@ -1,30 +1,19 @@
 import cp from 'child_process';
-import vm from 'vm';
+import { emitKeypressEvents, type Key } from 'node:readline';
 import type { MessageEvent } from '@xopenbot/onebot';
 
 const worker = cp.fork('../src/bridge.js');
 
+const isTTY = Boolean(process.stdin.isTTY);
 let buffer = '';
 
-const isComplete = (code: string) => {
-  try {
-    new vm.Script(code);
-    return true;
-  } catch {
-    return false;
+const echo = (text: string) => {
+  if (isTTY) {
+    process.stdout.write(text);
   }
 };
 
-process.stdin.on('data', data => {
-  buffer += data.toString();
-
-  if (!buffer.endsWith('\n') || !isComplete(buffer)) {
-    return;
-  }
-
-  const text = buffer.replace(/\r?\n$/, '');
-  buffer = '';
-
+const send = (text: string) => {
   const id = Math.random().toString(36);
   worker.send({
     id: id,
@@ -48,6 +37,42 @@ process.stdin.on('data', data => {
     detail_type: 'private',
     sub_type: ''
   } satisfies MessageEvent);
+};
+
+emitKeypressEvents(process.stdin);
+if (isTTY) {
+  process.stdin.setRawMode(true);
+}
+process.stdin.resume();
+
+process.stdin.on('keypress', (str: string | undefined, key: Key) => {
+  if (key.ctrl && (key.name === 'c' || key.name === 'd')) {
+    process.exit();
+  }
+
+  if (key.name === 'return' || key.name === 'enter') {
+    echo('\n');
+    const text = buffer;
+    buffer = '';
+    if (!text.trim()) {
+      return;
+    }
+    send(text);
+    return;
+  }
+
+  if (key.name === 'backspace') {
+    if (buffer.length) {
+      buffer = buffer.slice(0, -1);
+      echo('\b \b');
+    }
+    return;
+  }
+
+  if (str && !key.ctrl && !key.meta) {
+    buffer += str;
+    echo(str);
+  }
 });
 worker.on('message', data => {
   // @ts-ignore
