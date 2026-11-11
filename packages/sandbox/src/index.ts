@@ -21,8 +21,12 @@ export interface Config {
   dataPath?: string;
   /** 判断是否主人 **/
   master: string[];
-  /** 拓展的机器人API，放在$下，传API名称或者函数，忽略不带名称的函数 **/
-  botAPI?: (string | ((...args: unknown[]) => unknown))[];
+  /**
+   * 拓展的机器人API，放在$下。
+   * 传入API名称，沙箱内通过 `$.<名称>(参数数组, 回调?)` 调用；
+   * 回调参数为 `{ data, error }`，省略回调时只发起调用、忽略结果。
+   **/
+  botAPI?: string[];
 }
 
 type WorkEvent = CallApiRequest | ExecResponse;
@@ -58,21 +62,41 @@ const startWorker = () => {
     }
     const bot = bots.get(value.uin);
     if (!bot) {
+      worker?.send({
+        error: true,
+        data: `callApi Error: Bot ${value.uin} is not init`,
+        echo: value.echo
+      });
       return;
     }
     const action = bot[value.method] as AnyAction | undefined;
-    action
-      ?.apply(bot, value.params)
+    if (!action || typeof action !== 'function') {
+      worker?.send({
+        error: true,
+        data: `callApi Error: ${value.method} function is not defined`,
+        echo: value.echo
+      });
+      return;
+    }
+    Promise.resolve()
+      .then(() => action.apply(bot, value.params))
       .then(ret => {
         if (ret instanceof Map) {
           ret = Array.from(ret);
         }
         worker?.send({
+          error: false,
           data: ret,
           echo: value.echo
         });
       })
-      .catch(() => {});
+      .catch(e => {
+        worker?.send({
+          error: true,
+          data: e instanceof Error ? e.message : String(e),
+          echo: value.echo
+        });
+      });
   });
 };
 

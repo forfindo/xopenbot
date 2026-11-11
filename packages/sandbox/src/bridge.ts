@@ -29,7 +29,7 @@ export interface InitEvent {
 }
 
 type CheckCallApi = { method: StandardAPI | (string & {}); params: unknown[] };
-type CallApiResponse = { echo: string; data: unknown };
+type CallApiResponse = { echo: string; data: unknown; error: boolean };
 type DataType = MessageEvent | NoticeEvent | RequestEvent;
 type FetchCallback = (res: unknown) => void;
 
@@ -280,16 +280,23 @@ const init = async (data: DataType, gid?: string) => {
   const bot = bots.get(data.self.user_id)!;
   if (!bot.groups.size) {
     sandbox.setEnv(data);
-    const groups = (await callApi('getGroupList', [], false)).data as GroupInfo[];
-    bot.groups = new Map(groups.map(g => [String(g.group_id), g]));
+    const { data: resData, error } = await callApi('getGroupList', [], false);
+    if (!error) {
+      const groups = resData as GroupInfo[];
+      bot.groups = new Map(groups.map(g => [String(g.group_id), g]));
+    }
   }
-  const groups = gid
-    ? [(await callApi('getGroupInfo', [gid], false)).data as GroupInfo]
-    : bot.groups.values();
+  const { data: ginfo, error } = gid
+    ? await callApi('getGroupInfo', [gid], false)
+    : { error: false, data: 'gid为空' };
+  const groups = gid ? (error ? [] : [ginfo as GroupInfo]) : bot.groups.values();
   sandbox.setEnv(data);
   for (const ginfo of groups) {
-    const membersRsp = (await callApi('getGroupMemberList', [gid], false))
-      .data as GroupMemberInfo[];
+    if (!ginfo) {
+      continue;
+    }
+    const { data: memList, error } = await callApi('getGroupMemberList', [ginfo.group_id], false);
+    const membersRsp = error ? [] : (memList as GroupMemberInfo[]);
     if (!membersRsp?.length) {
       continue;
     }
@@ -675,14 +682,23 @@ process.on('message', (value: OnMessageEvent) => {
     config.botAPI?.forEach(item => {
       if (typeof item === 'string') {
         // @ts-ignore
-        $[item] = (...args: unknown[]) => {
-          callApi(item, args).catch(() => {});
+        $[item] = (args: unknown[], cb?: (value: unknown) => void) => {
+          const env = sandbox.getContext().data!;
+          const p = callApi(item, args);
+          const task = cb ? checkAndAddAsyncQueue(env) : void 0;
+          if (task) {
+            p.then(response => {
+              Reflect.deleteProperty(response, 'echo');
+              asyncCallback(task, cb!, [response]);
+            }).catch(e => {
+              asyncCallback(task, cb!, [
+                { error: true, data: e instanceof Error ? e.message : String(e) }
+              ]);
+            });
+          }
         };
-      } else if (typeof item === 'function' && item.name) {
         // @ts-ignore
-        $[item.name] = (...args: unknown[]) => {
-          callApi(item.name, args).catch(() => {});
-        };
+        Object.defineProperty($[item], 'name', { value: item, configurable: true });
       }
     });
     sandbox.include('$', $);

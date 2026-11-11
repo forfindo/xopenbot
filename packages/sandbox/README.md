@@ -297,6 +297,43 @@ clearTimeout(timer);
 | `Buffer` | Node `Buffer` |
 | `run` | 仅主人可用，在宿主侧 `eval` 任意代码 |
 
+### 拓展机器人 API
+
+通过 `init` 的 `botAPI` 配置可以把宿主 `Bot` 上的方法暴露到沙箱的 `$` 下：
+
+```ts
+await init(bot, {
+  master: ['10001'],
+  // 传 API 名称（字符串），对应 bot[名称]；函数项会被忽略
+  botAPI: ['getFriendList', 'getGroupMemberList']
+});
+```
+
+沙箱内按「参数数组 + 可选回调」调用：
+
+```js
+// 只发起调用，忽略结果
+$.getFriendList([]);
+
+// 通过回调获取结果
+$.getGroupMemberList([this.data.group_id], res => {
+  // res = { data, error }
+  if (res.error) {
+    this.last_error = res.data;
+  } else {
+    this.members = res.data;
+  }
+});
+```
+
+说明：
+
+- 第一个参数必须是**数组**，会作为调用参数原样传给对应 API；
+- 第二个参数是可选的异步回调，回调参数为 `{ data, error }`：
+  - 成功时 `error` 为 `false`，`data` 为 API 返回值；
+  - 失败时 `error` 为 `true`，`data` 为错误信息字符串；
+- 回调内继续发起异步调用同样受递归深度与频率限制（见「异步任务与限流」）。
+
 ### 沙箱上下文
 
 `sandbox.code.js` 定义了五个主要变量：
