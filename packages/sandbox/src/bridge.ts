@@ -683,6 +683,12 @@ process.on('message', (value: OnMessageEvent) => {
       if (typeof item === 'string') {
         // @ts-ignore
         $[item] = (args: unknown[], cb?: (value: unknown) => void) => {
+          if (!Array.isArray(args)) {
+            throw new TypeError('第一个参数必须是参数列表');
+          }
+          if (cb && typeof cb !== 'function') {
+            throw new TypeError('第二个参数只支持函数类型');
+          }
           const env = sandbox.getContext().data!;
           const p = callApi(item, args);
           const task = cb ? checkAndAddAsyncQueue(env) : void 0;
