@@ -2,7 +2,7 @@
 
 `@xopenbot/onebot` 提供 OneBot 12 接口的 **TypeScript 类型定义**，依据
 [OneBot 接口定义](https://github.com/botuniverse/onebot/tree/master/specs/interface)
-编写。本包**只导出类型**，不包含运行时实现：
+编写。包内绝大多数导出都是类型：
 
 - `Bot`：应用端机器人接口类型，声明协议规定的全部标准动作方法，并通过索引签名
   兼容扩展动作；
@@ -11,9 +11,11 @@
 - 10 种标准消息段与扩展消息段；
 - 动作请求、动作响应、返回码等公共类型。
 
-OneBot 实现端和应用端都可以直接引用这些类型。
+运行时另外导出 CQ 码互转函数和两个类型守卫：`toCQCode`、`fromCQCode`、
+`isExtendedSegment`、`isExtendedEvent`，其余内容均需以类型方式引入。OneBot
+实现端和应用端都可以直接引用这些类型。
 
-> 本包只提供类型，引用时请使用 `import type` 导入。
+> 类型请使用 `import type` 导入；运行时函数使用普通 `import`。
 
 ## 使用
 
@@ -24,6 +26,20 @@ import type {
   GroupMessageEvent,
   OneBotEvent
 } from '@xopenbot/onebot';
+```
+
+### CQ 码互转
+
+```ts
+import { fromCQCode, toCQCode } from '@xopenbot/onebot';
+
+const code = toCQCode([
+  { type: 'text', data: { text: '你好' } },
+  { type: 'mention', data: { user_id: '10000' } }
+]);
+// [CQ:text,text=你好][CQ:mention,user_id=10000]
+
+const segments = fromCQCode(code);
 ```
 
 ### 消息
@@ -40,20 +56,6 @@ const message: AnyMessageSegment[] = [
 
 // 动作请求参数可以使用字符串、单个消息段或消息段数组
 const content: Message = '你好';
-
-// 扩展消息段的类型名建议使用 `<prefix>.` 前缀
-const face: AnyMessageSegment = {
-  type: 'qq.face',
-  data: { id: '123' }
-};
-
-// 无前缀的扩展消息段类型可以通过声明合并加入 MessageSegmentMap
-declare module '@xopenbot/onebot' {
-  interface MessageSegmentMap {
-    face: { id: string };
-  }
-}
-const unprefixedFace: AnyMessageSegment = { type: 'face', data: { id: '123' } };
 ```
 
 标准消息段：`text`、`mention`、`mention_all`、`image`、`voice`、`audio`、
@@ -61,6 +63,21 @@ const unprefixedFace: AnyMessageSegment = { type: 'face', data: { id: '123' } };
 
 `Message` 可以是纯文本 `string`、单个消息段，或消息段数组；消息事件中的
 `message` 字段固定为 `AnyMessageSegment[]`。
+
+`AnyMessageSegment` 是 `StandardSegment | ExtendedSegment` 的联合类型。运行时
+可以用 `isExtendedSegment` 判断并收窄：
+
+```ts
+import type { AnyMessageSegment } from '@xopenbot/onebot';
+import { isExtendedSegment } from '@xopenbot/onebot';
+
+function handle(segment: AnyMessageSegment): void {
+  if (isExtendedSegment(segment)) {
+    segment.type; // string
+    segment.data; // 扩展消息段数据
+  }
+}
+```
 
 ### 动作
 
@@ -107,79 +124,68 @@ type Platform = PlatformActionName; // 除元动作外的标准动作
 ### Bot 接口
 
 `Bot` 是应用端机器人的接口类型，声明了协议规定的全部 31 个标准动作。方法名是动作名
-的小驼峰形式，返回值即动作响应中的 `data`，可以是同步值或 `Promise`
-（`MaybePromise<T>`）：
+的小驼峰形式，参数按动作参数顺序展开，最后一个可选参数 `options` 用于携带扩展参数；
+返回值即动作响应中的 `data`，可以是同步值或 `Promise`（`MaybePromise<T>`）。
+
+标准动作、`on` / `off` 都声明为**可选成员**，直接调用时需要使用可选链，或用
+`BotImpl` 声明必须实现的成员：
 
 ```ts
-import type { Bot } from '@xopenbot/onebot';
+import type { Bot, BotImpl } from '@xopenbot/onebot';
 
 declare const bot: Bot;
 
-const info = await bot.getSelfInfo(); // get_self_info
-const result = await bot.sendMessage({
-  // send_message
-  detail_type: 'group',
-  group_id: '123456',
-  message: '你好'
-});
+const info = await bot.getSelfInfo?.(); // get_self_info
+const result = await bot.sendMessage?.('group', '你好'); // send_message
+
+// BotImpl 把指定成员变为必选
+declare const impl: BotImpl<'sendMessage' | 'getSelfInfo'>;
+await impl.sendMessage('group', '你好');
+await impl.getSelfInfo();
 ```
 
 `Bot` 由标准动作与扩展动作两部分交叉而成：
 
 ```ts
 /** 拓展动作 */
-interface ExtensionAction {
-  [name: string]: (params: Record<string, unknown>) => MaybePromise<unknown>;
+interface ExtendedAction {
+  [name: string]: (...args: unknown[]) => MaybePromise<unknown>;
 }
 
 /** 标准动作与事件回调 */
 interface StandardBot {
-  on(name: 'message', event: MessageEvent | ExtendedEvent<'message'>): void;
-  // ... request / notice / mete 重载
-  getLatestEvents(params?: GetLatestEventsParams): MaybePromise<OneBotEvent[]>;
+  selfInfo?: UserInfo;
+  logger?: {
+    debug(...args: unknown[]): void;
+    info(...args: unknown[]): void;
+    warn(...args: unknown[]): void;
+    error(...args: unknown[]): void;
+  };
+
+  on?(name: 'message', listener: (e: MessageEvent | ExtendedEvent<'message'>) => void): void;
+  off?(name: 'message', listener: (e: MessageEvent | ExtendedEvent<'message'>) => void): void;
+  // ... request / notice / meta 重载
+
+  getLatestEvents(
+    limit?: number,
+    timeout?: number,
+    options?: Record<string, unknown>
+  ): MaybePromise<OneBotEvent[]>;
   // ... 其余标准动作
 }
 
-export type Bot = StandardBot & ExtensionAction;
-```
-
-因此除标准方法外，任意扩展动作都可以直接以属性方法的形式调用：
-
-```ts
-const honor = await bot.qqGetGroupHonorInfo({ group_id: '123456' });
+export type Bot = StandardBot & ExtendedAction;
 ```
 
 需要留意的几点：
 
-- 已声明的标准方法保留精确的参数与返回类型，其他任意名称按扩展动作类型处理；
-- `on` 目前声明的重载为 `message`、`request`、`notice`、`mete`（元事件重载的
-  名称在当前源码中写作 `'mete'`）；
+- 已声明的标准方法保留精确的参数与返回类型；
+- `on` / `off` 目前声明了 `message`、`request`、`notice`、`meta` 四组重载；其中
+  `notice` 重载的监听器参数在源码中写作 `RequestEvent | ExtendedEvent<'notice'>`；
 - 由于 `Bot` 包含字符串索引签名，`class ... implements Bot` 需要类自身也声明
-  兼容的索引签名。实现端通常先定义自己的类或对象，在作为 `Bot` 使用时再断言类型。
-
-扩展动作合并到 `ActionMap` 后，`ActionMap`、`StandardActionRequest` 和
-`StandardActionResponse` 会获得对应的动作名、参数与响应类型：
-
-```ts
-declare module '@xopenbot/onebot' {
-  interface ActionMap {
-    'qq.get_group_honor_info': {
-      params: { group_id: string };
-      result: { honors: string[] };
-    };
-  }
-}
-
-type HonorParams = ActionMap['qq.get_group_honor_info']['params'];
-// { group_id: string }
-
-declare const honorRequest: StandardActionRequest<'qq.get_group_honor_info'>;
-// params: { group_id: string }
-```
-
-注意：`Bot` 的扩展动作索引签名不会读取 `ActionMap`，`bot.qqGetGroupHonorInfo` 的
-参数与返回值仍按 `Record<string, unknown>` / `MaybePromise<unknown>` 处理；需要精确
-类型时使用 `ActionMap` 或 `StandardActionRequest` / `StandardActionResponse`。
+  兼容的索引签名。实现端通常先定义自己的类或对象，在作为 `Bot` 使用时再断言类型；
+- 另导出 `StandardAPI = Exclude<keyof StandardBot, 'on'>`，表示标准成员键名的联合
+  类型（注意它只排除了 `on`，仍包含 `off`、`selfInfo` 和 `logger`）。
 
 建立连接、发送动作请求等具体逻辑由使用者实现。
 
@@ -222,6 +228,24 @@ function handle(event: OneBotEvent): void {
 }
 ```
 
+需要判断事件是否为扩展事件时，可以使用 `isExtendedEvent`：
+
+```ts
+import type { OneBotEvent } from '@xopenbot/onebot';
+import { isExtendedEvent } from '@xopenbot/onebot';
+
+function handle(event: OneBotEvent): void {
+  if (isExtendedEvent(event)) {
+    event.type; // 非标准事件类型
+    event.detail_type; // string
+    event['qq.raw_event_id']; // unknown
+  }
+}
+```
+
+`isExtendedEvent` 会排除全部标准事件（元事件、标准消息事件、标准通知事件），但
+`type` 为 `request` 的事件始终返回 `false`。
+
 标准事件：
 
 - `meta.connect`、`meta.heartbeat`、`meta.status_update`
@@ -244,142 +268,6 @@ import type { RetCode, RetCodeMap } from '@xopenbot/onebot';
 const success: RetCode = 0;
 const platformError: RetCode = 34_000;
 type PlatformError = RetCodeMap['PlatformError']; // 34000
-```
-
-## 扩展
-
-OneBot 允许实现对事件、动作和消息段进行扩展。类型定义提供了三种扩展方式：
-
-- **扩展字段**：大多数标准对象（事件、动作参数、消息段数据、用户/群/频道信息等）
-  继承 `Extensible`，允许添加任意扩展字段（规范建议使用 `<prefix>.` 前缀，但并非
-  强制要求）；
-- **声明合并**：`ActionMap`、`MessageSegmentMap`、`RetCodeMap` 都是接口，可以通过
-  `declare module '@xopenbot/onebot'` 合并实现自定义的类型；
-- **扩展事件**：`ExtendedEvent` 可以组合 `type`、`detail_type` 和自定义字段，
-  得到精确的扩展事件类型。
-
-### 扩展字段
-
-```ts
-import type { GroupMessageEvent } from '@xopenbot/onebot';
-
-const event: GroupMessageEvent = {
-  id: 'b6e65187-5ac0-489c-b431-53078e9d2bbb',
-  time: 1_700_000_000,
-  type: 'message',
-  detail_type: 'group',
-  sub_type: '',
-  self: { platform: 'qq', user_id: '10000' },
-  message_id: '1',
-  message: [{ type: 'text', data: { text: '你好' } }],
-  alt_message: '你好',
-  group_id: '123456',
-  user_id: '20000',
-  'qq.message_scene': 'group',
-  raw_event_id: 'abc'
-};
-```
-
-`Extensible` 使用 `[key: string]: unknown`，字段名不受限制。规范建议扩展字段使用
-`<prefix>.` 前缀（如 `qq.message_scene`），但并非强制要求。如果希望无前缀字段
-也有精确类型，可以通过接口继承声明：
-
-```ts
-interface MyGroupMessageEvent extends GroupMessageEvent {
-  raw_event_id: string;
-}
-```
-
-标准动作参数、动作响应数据、消息段参数、事件、用户/群/频道信息、状态信息等
-都支持这种扩展字段。
-
-### 扩展消息段
-
-```ts
-import type { AnyMessageSegment, SegmentType } from '@xopenbot/onebot';
-
-declare module '@xopenbot/onebot' {
-  interface MessageSegmentMap {
-    'qq.face': { id: string };
-  }
-}
-
-const face: AnyMessageSegment = { type: 'qq.face', data: { id: '123' } };
-
-// 声明合并后 SegmentType 包含 'qq.face'
-const type: SegmentType = 'qq.face';
-```
-
-### 扩展动作
-
-```ts
-import type { ActionDefinition, ActionMap, ActionName } from '@xopenbot/onebot';
-
-declare module '@xopenbot/onebot' {
-  interface ActionMap {
-    'qq.get_group_honor_info': ActionDefinition<
-      { group_id: string },
-      { honors: string[] }
-    >;
-  }
-}
-
-type Params = ActionMap['qq.get_group_honor_info']['params'];
-// { group_id: string }
-
-// 声明合并后 ActionName 包含 'qq.get_group_honor_info'
-const action: ActionName = 'qq.get_group_honor_info';
-```
-
-`StandardActionRequest<'qq.get_group_honor_info'>` 和
-`StandardActionResponse<'qq.get_group_honor_info'>` 也会自动使用扩展动作的参数和
-响应类型。
-
-`Bot` 的 `ExtensionAction` 索引签名允许在不合并 `ActionMap` 的情况下调用任意扩展
-动作，此时参数为 `Record<string, unknown>`、返回值为 `MaybePromise<unknown>`；声明
-合并 `ActionMap` 只会让 `ActionMap` 以及 `StandardActionRequest` /
-`StandardActionResponse` 获得精确类型，不会改变 `Bot` 索引签名的类型。
-
-### 扩展事件
-
-`OneBotEvent` 已经包含宽泛的 `ExtendedEvent`，任何扩展事件都可以赋值给它。需要
-精确类型时，使用 `ExtendedEvent` 指定 `type` 和 `detail_type`：
-
-```ts
-import type { ExtendedEvent } from '@xopenbot/onebot';
-
-type QqGroupFileUploadEvent = ExtendedEvent<'notice', 'qq.group_file_upload'> & {
-  group_id: string;
-  file_id: string;
-};
-
-const event: QqGroupFileUploadEvent = {
-  id: 'event-1',
-  time: 1_700_000_000,
-  type: 'notice',
-  detail_type: 'qq.group_file_upload',
-  sub_type: '',
-  self: { platform: 'qq', user_id: '10000' },
-  group_id: '123456',
-  file_id: 'file-1'
-};
-```
-
-### 扩展返回码
-
-标准返回码是固定值，但 `3xxxx` 的低三位和 `6xxxx`～`9xxxx` 可以由实现自行定义，
-可以合并到 `RetCodeMap`：
-
-```ts
-import type { RetCode } from '@xopenbot/onebot';
-
-declare module '@xopenbot/onebot' {
-  interface RetCodeMap {
-    QqGroupNotFound: 34_101;
-  }
-}
-
-const code: RetCode = 34_101;
 ```
 
 ## 目录结构
@@ -420,27 +308,32 @@ packages/onebot
 │   │   └── notice-events.ts
 │   ├── file                # 文件动作
 │   │   └── actions.ts
-│   └── common              # 跨分类公共类型
-│       └── notice.ts       # 通知事件子类型
-└── package.json
+│   └── common              # 跨分类公共类型与运行时工具
+│       ├── notice.ts       # 通知事件子类型
+│       └── utils.ts        # CQ 码互转（唯一的运行时实现）
+├── dist                    # rollup 构建产物
+├── rollup.config.js
+├── tsconfig.json
+├── package.json
+└── README.md
 ```
 
-## 类型检查
+## 构建与类型检查
 
-本包直接以 TypeScript 源码形式使用（`package.json` 的 `main` 指向 `src/index.ts`），
-没有独立的构建脚本。在仓库根目录执行：
+`package.json` 的 `module` / `types` 与 `exports` 均指向 `dist`，发布前需要通过
+rollup 构建：
+
+```bash
+cd packages/onebot
+pnpm build
+```
+
+在仓库根目录执行：
 
 ```bash
 pnpm check
 pnpm lint
 ```
 
-> 注意：根 `tsconfig.json` 的 project references 目前未包含 `packages/onebot`，
-> `pnpm check` 不会直接检查本包。需要单独检查时，可在 `packages/onebot` 下执行：
->
-> ```bash
-> npx tsc --ignoreConfig --noEmit --strict \
->   --target esnext --module esnext --moduleResolution bundler src/index.ts
-> ```
->
-> `--ignoreConfig` 用于避免向上查找并使用仓库根目录的 `tsconfig.json`。
+根 `tsconfig.json` 的 project references 已包含 `packages/onebot`，`pnpm check`
+会一并检查本包。

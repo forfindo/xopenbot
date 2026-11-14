@@ -24,6 +24,8 @@ import type {
 } from './user/notice-events';
 import type { PrivateMessageEvent } from './user/message-events';
 
+declare const extension_event: unique symbol;
+
 /** 消息事件 */
 export type MessageEvent = PrivateMessageEvent | GroupMessageEvent | ChannelMessageEvent;
 
@@ -66,6 +68,7 @@ export type ExtendedEvent<T extends EventType = EventType, D extends string = st
   D
 > & {
   self: Self;
+  readonly [extension_event]: true;
   [key: string]: unknown;
 };
 
@@ -74,3 +77,37 @@ export type OneBotEvent = MetaEvent | MessageEvent | NoticeEvent | RequestEvent 
 
 /** 除元事件外的标准事件 */
 export type NonMetaEvent = MessageEvent | NoticeEvent | RequestEvent;
+
+export function isExtendedEvent(e: OneBotEvent): e is ExtendedEvent {
+  if (e.type === 'meta') {
+    return (
+      e.detail_type !== 'connect' &&
+      e.detail_type !== 'heartbeat' &&
+      e.detail_type !== 'status_update'
+    );
+  }
+  if (e.type === 'message') {
+    return e.detail_type !== 'private' && e.detail_type !== 'group' && e.detail_type !== 'channel';
+  }
+  if (e.type === 'notice') {
+    return (
+      e.detail_type !== 'guild_member_decrease' &&
+      e.detail_type !== 'channel_member_decrease' &&
+      e.detail_type !== 'channel_create' &&
+      e.detail_type !== 'channel_delete' &&
+      e.detail_type !== 'channel_message_delete' &&
+      e.detail_type !== 'group_message_delete' &&
+      e.detail_type !== 'private_message_delete' &&
+      e.detail_type !== 'channel_member_increase' &&
+      e.detail_type !== 'friend_decrease' &&
+      e.detail_type !== 'friend_increase' &&
+      e.detail_type !== 'group_member_decrease' &&
+      e.detail_type !== 'group_member_increase' &&
+      e.detail_type !== 'guild_member_increase'
+    );
+  }
+  if (e.type === 'request') {
+    return false;
+  }
+  return false;
+}

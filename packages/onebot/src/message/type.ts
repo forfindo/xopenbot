@@ -4,9 +4,6 @@ import type { AnyMessageSegment } from './segments';
 /** 消息内容：纯文本、单个消息段或消息段数组 */
 export type Message = string | AnyMessageSegment | AnyMessageSegment[];
 
-/** 消息段数组 */
-export type MessageSegmentArray = AnyMessageSegment[];
-
 /** 二进制数据，OneBot 中以 Base64 编码的字符串表示 */
 export type Bytes = string;
 

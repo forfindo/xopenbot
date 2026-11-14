@@ -1,6 +1,6 @@
 {
   "name": "@xopenbot/onebot",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "OneBot 12类型声明",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",

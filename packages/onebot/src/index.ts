@@ -43,5 +43,7 @@ export type * from './file/actions';
 export type * from './common/notice';
 export type * from './action-map';
 export type * from './event';
+export { isExtendedEvent } from './event';
+export { isExtendedSegment } from './message/segments';
 
 export * from './common/utils';
