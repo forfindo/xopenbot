@@ -1,0 +1,39 @@
+packages/plugin/src/utils/event.ts
+  s_fa40f2c85a43d9::t_00d82e3fa8d416 2-3
+  s_fa40f2c85a43d9::t_0fd83879ce0292 1,4
+packages/plugin/src/workspace.ts
+  s_fa40f2c85a43d9::t_c8aac0352f44ad 94-95,130,138-139,142-143,147-164,169
+  s_fa40f2c85a43d9::t_6477cf8cf27439 140-141,145-146
+  s_fa40f2c85a43d9::t_47cd671e0e97a3 48-54,133,171
+  s_fa40f2c85a43d9::t_e096cb495a8339 103-113,246
+  s_fa40f2c85a43d9::t_850170e117ac2f 91-93
+  s_fa40f2c85a43d9::t_0fb7247c8acb8c 96-98,100-102
+  s_fa40f2c85a43d9::t_e1b27619c17161 114-116,127-129
+  s_fa40f2c85a43d9::t_8561bd14a4be3e 131-132
+  s_fa40f2c85a43d9::t_359c7ce3538a9e 134-137
+  s_fa40f2c85a43d9::t_0a833ee1afb9df 144
+  s_fa40f2c85a43d9::t_7c133c3f49d65f 165-168
+  s_fa40f2c85a43d9::t_749ece8aff5b2c 170
+  s_fa40f2c85a43d9::t_31082c633f7559 172
+  s_fa40f2c85a43d9::t_ba4135f73b0580 243-245
+  s_fa40f2c85a43d9::t_b076ae91362e8d 7,15-16,34,37-43,89-90,99,117-126,194-199,230-242,249-250,290,317
+packages/plugin/src/types/workspace.ts
+  s_fa40f2c85a43d9::t_29970f7f0e1b24 33-35
+  s_fa40f2c85a43d9::t_87fbc080ce1591 2,36-48,59,66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7175da2cf2229ea84fc6ff356be3ba7620e3368f",
+  "prompts": {},
+  "sessions": {
+    "s_fa40f2c85a43d9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e273d3c90ffe7twu5dmiA3MIod",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
