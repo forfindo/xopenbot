@@ -15,6 +15,7 @@ packages/plugin
 │   │   ├── message-part.ts  # 消息段类型 Part
 │   │   └── workspace.ts     # 插件、命令、定时任务等类型定义
 │   └── utils
+│       ├── event.ts         # 事件名层级拆分
 │       ├── merge.ts         # 深层次对象合并
 │       └── type-guard.ts    # 类型守卫
 ├── package.json
@@ -141,7 +142,7 @@ const outputs = await workspace.process('echo 你好', {});
 workspace.deregister('echo');
 ```
 
-`deregister` 按插件的 `info.name` 删除该插件的插件信息、全部命令、`init` 注入的 API 与该插件的 `state`，并取消它的所有定时任务。重复注册同名插件时会先自动执行一次 `deregister`，因此插件状态会重置。注意：当前 `loadListener` 注册的回调不会被 `deregister` 清理。
+`deregister` 按插件的 `info.name` 删除该插件的插件信息、全部命令、`init` 注入的 API 与该插件的 `state`，取消它的所有定时任务，并移除 `loadListener` 注册的全部事件监听。重复注册同名插件时会先自动执行一次 `deregister`，因此插件状态会重置，监听器也不会重复挂载。
 
 ### 5. 定时任务
 
@@ -188,7 +189,8 @@ const workspace = new Workspace(bot, logger);
 
 - `logger`：`LikeLogger`，工作区注入的日志对象；
 - `bot`：构造 `Workspace` 时传入的 bot 实例；
-- `state`：该插件专属的状态对象，跨命令/定时任务持久，重复注册同名插件会重置。
+- `state`：该插件专属的状态对象，跨命令/定时任务持久，重复注册同名插件会重置；
+- `emit`：`(event: string, ...args: unknown[]) => void`，向工作区事件总线派发事件。事件名带 `.` 时会按层级依次触发（`a.b.c` 依次触发 `a`、`a.b`、`a.b.c` 的监听器）。
 
 ```ts
 loadCommand(ctx) {
@@ -233,14 +235,32 @@ const plugins = workspace.listPlugin();
 
 ## 事件监听
 
-插件可以实现 `loadListener()` 返回 `Record<事件名, 回调>`，工作区会收集这些回调，但目前**尚未提供事件派发入口**，因此回调不会被触发。
+插件可以实现 `loadListener()` 返回 `Listener`：键为事件名，值为回调或回调数组。工作区会在插件注册完成后自动挂载监听，并在 `deregister` 时移除：
 
 ```ts
 loadListener() {
   return {
     message: ctx => {
       ctx.logger.debug('收到消息');
-    }
+    },
+    // 同一个事件也可以注册多个回调
+    'my.custom': [
+      ctx => ctx.logger.debug('自定义事件', ctx.event),
+      ctx => ctx.logger.debug('第二个回调')
+    ]
   };
 }
 ```
+
+内置事件 `message` / `request` / `notice` / `meta` 会监听 bot 的对应事件；其余事件名注册在工作区事件总线上，可通过 `ctx.emit` 派发：
+
+```ts
+execute(input, ctx) {
+  ctx.emit('my.custom', { input });
+  return { content: [{ type: 'text', text: '已派发' }] };
+}
+```
+
+事件名带 `.` 时会按层级派发：`ctx.emit('a.b.c')` 会依次触发 `a`、`a.b`、`a.b.c` 的监听器。回调的 `ctx.event` 是派发时传入的第一个参数。
+
+监听回调支持同步或异步（返回 `Promise`）。回调抛错或被 reject 时只会记录到 `logger.error`，不会影响同一事件上的其他监听器。
