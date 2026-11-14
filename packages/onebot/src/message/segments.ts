@@ -101,7 +101,7 @@ export type StandardSegment =
 export type AnyMessageSegment = StandardSegment | ExtendedSegment;
 
 export function isExtendedSegment(segment: AnyMessageSegment): segment is ExtendedSegment {
-  if (!('type' in segment) && !('data' in segment)) {
+  if (!('type' in segment) || !('data' in segment)) {
     return false;
   }
   return (
