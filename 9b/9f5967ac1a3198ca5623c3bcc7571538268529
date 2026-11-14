@@ -1,0 +1,14 @@
+packages/onebot/src/message/segments.ts
+  h_7037025082b470 3-14,17-25,27-33,36,39,42,45,48,51,54-66,69-77,79-85,87-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "9b9f5967ac1a3198ca5623c3bcc7571538268529",
+  "prompts": {},
+  "humans": {
+    "h_7037025082b470": {
+      "author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
