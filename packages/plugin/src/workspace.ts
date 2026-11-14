@@ -4,7 +4,7 @@ import type {
   Command,
   IPlugin,
   LikeLogger,
-  ListenerCallback,
+  ListenerCallbackInfo,
   PluginContext,
   PluginInfo,
   ProcessResult,
@@ -12,6 +12,8 @@ import type {
   ScheduleTask
 } from '@/types/workspace';
 import type { Bot } from '@xopenbot/onebot';
+import { EventEmitter } from 'node:events';
+import { extraSubEvents } from '@/utils/event';
 
 function normalizePattern(pattern: string | RegExp): RegExp {
   if (typeof pattern === 'string') {
@@ -29,13 +31,27 @@ export class Workspace {
   private tasks: (ScheduleTask & { plugin: string })[] = [];
   private runningTask: Job[] = [];
   private states: Record<string, Record<string, unknown>> = {};
-  private listeners: Record<string, ListenerCallback[]> = {};
+  private listeners: Record<string, ListenerCallbackInfo[]> = {};
   private readonly logger: LikeLogger;
   private readonly bot: Bot;
+  private emitter: EventEmitter = new EventEmitter();
+  private emit = (event: string, ...args: unknown[]) => {
+    const events = extraSubEvents(event);
+    for (const e of events) {
+      this.emitter.emit(e, ...args);
+    }
+  };
 
   constructor(bot: Bot, logger?: LikeLogger) {
     this.bot = bot;
     this.logger = logger || this.bot.logger || console;
+    this.emitter.setMaxListeners(0);
+  }
+
+  private logListenerError(pluginName: string, event: string, error: unknown) {
+    this.logger.error(
+      `插件 ${pluginName} 处理事件 ${event} 时出错：${error instanceof Error ? error.message : String(error)}`
+    );
   }
 
   private addSchedule(task: (typeof this.tasks)[number]) {
@@ -70,6 +86,90 @@ export class Workspace {
     this.runningTask.push(job);
   }
 
+  private listen(name: string) {
+    for (const key of Object.keys(this.listeners)) {
+      const values = this.listeners[key]!;
+      values.forEach(cbInfo => {
+        if (cbInfo.pluginName !== name) {
+          return;
+        }
+        const pluginContext = {
+          logger: this.logger,
+          bot: this.bot,
+          emit: this.emit,
+          state: this.states[cbInfo.pluginName] || {}
+        } satisfies PluginContext;
+        cbInfo.fn = (e: unknown) => {
+          try {
+            const result = cbInfo.callback({
+              event: e,
+              ...pluginContext
+            });
+            if (result instanceof Promise) {
+              result.catch(error => this.logListenerError(name, key, error));
+            }
+          } catch (error) {
+            this.logListenerError(name, key, error);
+          }
+        };
+        switch (key) {
+          case 'message':
+            this.bot.on?.('message', cbInfo.fn);
+            break;
+          case 'notice':
+            this.bot.on?.('notice', cbInfo.fn);
+            break;
+          case 'request':
+            this.bot.on?.('request', cbInfo.fn);
+            break;
+          case 'meta':
+            this.bot.on?.('meta', cbInfo.fn);
+            break;
+          default:
+            this.emitter.on(key, cbInfo.fn);
+        }
+      });
+    }
+  }
+
+  private cancelListen(pluginName: string) {
+    for (const key of Object.keys(this.listeners)) {
+      const values = this.listeners[key]!;
+      const isBotEvent =
+        key === 'message' || key === 'notice' || key === 'request' || key === 'meta';
+      const matched = values.filter(item => item.pluginName === pluginName && item.fn);
+      if (matched.length && isBotEvent && !this.bot.off) {
+        this.logger.warn(`bot 未实现 off 方法，无法取消插件 ${pluginName} 对 ${key} 事件的监听`);
+      }
+      // 取消监听
+      matched.forEach(cbInfo => {
+        if (!cbInfo.fn || (isBotEvent && !this.bot.off)) {
+          return;
+        }
+        switch (key) {
+          case 'message':
+            this.bot.off!('message', cbInfo.fn);
+            break;
+          case 'notice':
+            this.bot.off!('notice', cbInfo.fn);
+            break;
+          case 'request':
+            this.bot.off!('request', cbInfo.fn);
+            break;
+          case 'meta':
+            this.bot.off!('meta', cbInfo.fn);
+            break;
+          default:
+            this.emitter.off(key, cbInfo.fn);
+        }
+      });
+      this.listeners[key] = this.listeners[key]!.filter(item => item.pluginName !== pluginName);
+      if (!this.listeners[key].length) {
+        Reflect.deleteProperty(this.listeners, key);
+      }
+    }
+  }
+
   private cancelSchedule(task: (typeof this.tasks)[number]): void {
     const existingIndex = this.tasks.findIndex(
       item => item.plugin === task.plugin && item.name === task.name
@@ -91,7 +191,12 @@ export class Workspace {
     try {
       // —— 准备阶段：只计算、不碰 this.*，任何抛错都安全 ——
       const state: Record<string, unknown> = {};
-      const ctx: PluginContext = { logger: this.logger, bot: this.bot, state };
+      const ctx: PluginContext = {
+        logger: this.logger,
+        bot: this.bot,
+        emit: this.emit,
+        state
+      };
 
       const apis = await plugin.init?.(ctx);
       const commands = (await plugin.loadCommand(ctx)).map(item => ({
@@ -122,12 +227,27 @@ export class Workspace {
       }
       if (listeners) {
         for (const event of Object.keys(listeners)) {
-          if (this.listeners[event]) {
-            this.listeners[event].push(listeners[event]!);
-          } else {
-            this.listeners[event] = [listeners[event]!];
+          const callbacks = Array.isArray(listeners[event]!)
+            ? listeners[event]
+            : [listeners[event]!];
+          for (const cb of callbacks) {
+            if (this.listeners[event]) {
+              this.listeners[event].push({
+                pluginName: name,
+                callback: cb
+              });
+            } else {
+              this.listeners[event] = [
+                {
+                  pluginName: name,
+                  callback: cb
+                }
+              ];
+            }
           }
         }
+        // 开启事件监听
+        this.listen(name);
       }
     } catch (e) {
       this.logger.warn(`插件 ${name} 加载失败，reason：${String(e)}`);
@@ -167,6 +287,7 @@ export class Workspace {
             ...ctx,
             logger: this.logger,
             bot: this.bot,
+            emit: this.emit,
             state: this.states[command.plugin] || {}
           },
           result.slice(1)
@@ -193,6 +314,7 @@ export class Workspace {
     removed.forEach(item => this.cancelSchedule(item));
     Reflect.deleteProperty(this.apis, pluginName);
     Reflect.deleteProperty(this.states, pluginName);
+    this.cancelListen(pluginName);
   }
 
   listPlugin() {

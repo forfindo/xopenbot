@@ -1,5 +1,5 @@
 import type { Part } from '@/types/message-part';
-import type { Bot } from '@xopenbot/onebot';
+import type { Bot, MessageEvent, MetaEvent, NoticeEvent, RequestEvent } from '@xopenbot/onebot';
 
 type MaybePromise<T> = T | Promise<T>;
 type None = void | undefined | null;
@@ -30,7 +30,22 @@ export interface Command {
   execute: (input: string, ctx: PluginContext, args?: string[]) => MaybePromise<ExecResult | None>;
 }
 
-export type ListenerCallback = (ctx: PluginContext) => MaybePromise<None>;
+export type ListenerCallback<T = unknown> = (
+  ctx: PluginContext & { event: T }
+) => MaybePromise<None>;
+
+export interface ListenerCallbackInfo {
+  callback: ListenerCallback;
+  fn?: (e: unknown) => void;
+  pluginName: string;
+}
+
+export type Listener = {
+  message?: ListenerCallback<MessageEvent> | ListenerCallback<MessageEvent>[];
+  request?: ListenerCallback<RequestEvent> | ListenerCallback<RequestEvent>[];
+  notice?: ListenerCallback<NoticeEvent> | ListenerCallback<NoticeEvent>[];
+  meta?: ListenerCallback<MetaEvent> | ListenerCallback<MetaEvent>[];
+} & Record<string, ListenerCallback | ListenerCallback[]>;
 
 export interface IPlugin {
   info: PluginInfo;
@@ -41,13 +56,14 @@ export interface IPlugin {
   /** 定时任务 **/
   loadSchedule?(ctx: PluginContext): MaybePromise<ScheduleTask[]>;
   /** 事件监听 **/
-  loadListener?(ctx: PluginContext): MaybePromise<Record<string, ListenerCallback>>;
+  loadListener?(ctx: PluginContext): MaybePromise<Listener>;
 }
 
 export interface PluginContext {
   logger: LikeLogger;
   bot: Bot;
   state: Record<string, unknown>;
+  emit: (event: string, ...args: unknown[]) => void;
   [key: string]: unknown;
 }
 
