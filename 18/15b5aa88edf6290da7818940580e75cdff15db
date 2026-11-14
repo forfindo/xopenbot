@@ -1,0 +1,24 @@
+packages/onebot/src/bot.ts
+  s_21c786d4da6a23::t_71c9c729eb6329 298
+  s_21c786d4da6a23::t_30c26b5d60e65c 296-297
+packages/onebot/README.md
+  s_21c786d4da6a23::t_1c1c150022c717 177
+  s_21c786d4da6a23::t_b5998491f1dc5c 151
+  s_21c786d4da6a23::t_ff9df11d1754f3 152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1815b5aa88edf6290da7818940580e75cdff15db",
+  "prompts": {},
+  "sessions": {
+    "s_21c786d4da6a23": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e28093053ffe2WLh7EMsnFiCHF",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
