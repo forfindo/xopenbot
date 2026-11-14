@@ -1,108 +1,119 @@
 import type { Extensible } from '../rules';
 
-/** `text` 纯文本消息段 */
-export interface TextSegmentData extends Extensible {
-  /** 纯文本内容 */
-  text: string;
-}
+declare const extension_segment: unique symbol;
 
-/** `mention` 提及消息段 */
-export interface MentionSegmentData extends Extensible {
-  /** 提及的用户 ID */
-  user_id: string;
-}
+/** 消息段通用结构：`type` 为类型字面量，`data` 允许扩展字段 */
+export type SegmentOf<T extends string, D extends object> = {
+  type: T;
+  data: D & Extensible;
+};
 
-/** `mention_all` 提及所有人消息段，无参数 */
-export type MentionAllSegmentData = Extensible;
-
-/** `image` 图片消息段 */
-export interface ImageSegmentData extends Extensible {
-  /** 图片文件 ID */
-  file_id: string;
-}
-
-/** `voice` 语音消息段 */
-export interface VoiceSegmentData extends Extensible {
-  /** 语音文件 ID */
-  file_id: string;
-}
-
-/** `audio` 音频消息段 */
-export interface AudioSegmentData extends Extensible {
-  /** 音频文件 ID */
-  file_id: string;
-}
-
-/** `video` 视频消息段 */
-export interface VideoSegmentData extends Extensible {
-  /** 视频文件 ID */
-  file_id: string;
-}
-
-/** `file` 文件消息段 */
-export interface FileSegmentData extends Extensible {
+/** 带 `file_id` 的消息段数据，`image`/`voice`/`audio`/`video`/`file` 共用 */
+export interface FileIdData {
   /** 文件 ID */
   file_id: string;
 }
 
+/** `text` 纯文本消息段 */
+export type Text = SegmentOf<
+  'text',
+  {
+    /** 纯文本内容 */
+    text: string;
+  }
+>;
+
+/** `mention` 提及消息段 */
+export type Mention = SegmentOf<
+  'mention',
+  {
+    /** 提及的用户 ID */
+    user_id: string;
+  }
+>;
+
+/** `mention_all` 提及所有人消息段，无参数 */
+export type MentionAll = SegmentOf<'mention_all', Extensible>;
+
+/** `image` 图片消息段 */
+export type Image = SegmentOf<'image', FileIdData>;
+
+/** `voice` 语音消息段 */
+export type Voice = SegmentOf<'voice', FileIdData>;
+
+/** `audio` 音频消息段 */
+export type Audio = SegmentOf<'audio', FileIdData>;
+
+/** `video` 视频消息段 */
+export type Video = SegmentOf<'video', FileIdData>;
+
+/** `file` 文件消息段 */
+export type File = SegmentOf<'file', FileIdData>;
+
 /** `location` 位置消息段 */
-export interface LocationSegmentData extends Extensible {
-  /** 纬度 */
-  latitude: number;
-  /** 经度 */
-  longitude: number;
-  /** 标题 */
-  title: string;
-  /** 地址内容 */
-  content: string;
-}
+export type Location = SegmentOf<
+  'location',
+  {
+    /** 纬度 */
+    latitude: number;
+    /** 经度 */
+    longitude: number;
+    /** 标题 */
+    title: string;
+    /** 地址内容 */
+    content: string;
+  }
+>;
 
 /** `reply` 回复消息段 */
-export interface ReplySegmentData extends Extensible {
-  /** 回复的消息 ID */
-  message_id: string;
-  /** 回复的消息发送者 ID，发送时可以不传入 */
-  user_id?: string;
+export type Reply = SegmentOf<
+  'reply',
+  {
+    /** 回复的消息 ID */
+    message_id: string;
+    /** 回复的消息发送者 ID，发送时可以不传入 */
+    user_id?: string;
+  }
+>;
+
+export type ExtendedSegment = SegmentOf<
+  string,
+  {
+    readonly [extension_segment]: true;
+    [key: string]: unknown;
+  }
+>;
+
+/** 标准消息段 */
+export type StandardSegment =
+  | Text
+  | Mention
+  | MentionAll
+  | Image
+  | Voice
+  | Audio
+  | Video
+  | File
+  | Location
+  | Reply;
+
+/** 任意标准或扩展消息段 */
+export type AnyMessageSegment = StandardSegment | ExtendedSegment;
+
+export function isExtendedSegment(segment: AnyMessageSegment): segment is ExtendedSegment {
+  if (!('type' in segment) && !('data' in segment)) {
+    return false;
+  }
+  return (
+    segment.type !== 'text' &&
+    segment.type !== 'mention' &&
+    segment.type !== 'mention_all' &&
+    segment.type !== 'file' &&
+    segment.type !== 'image' &&
+    segment.type !== 'reply' &&
+    segment.type !== 'video' &&
+    segment.type !== 'voice' &&
+    segment.type !== 'audio' &&
+    segment.type !== 'location'
+  );
 }
-
-/**
- * 标准消息段类型到消息段数据的映射。
- *
- * OneBot 实现或应用可以扩展消息段类型，通过声明合并补充：
- *
- * ```ts
- * declare module '@xopenbot/bot' {
- *   interface MessageSegmentMap {
- *     'qq.custom': { foo: string };
- *   }
- * }
- * ```
- */
-export interface MessageSegmentMap {
-  text: TextSegmentData;
-  mention: MentionSegmentData;
-  mention_all: MentionAllSegmentData;
-  image: ImageSegmentData;
-  voice: VoiceSegmentData;
-  audio: AudioSegmentData;
-  video: VideoSegmentData;
-  file: FileSegmentData;
-  location: LocationSegmentData;
-  reply: ReplySegmentData;
-}
-
-/** 标准消息段类型 */
-export type SegmentType = keyof MessageSegmentMap;
-
-/**
- * 任意标准或扩展消息段
- *
- * 条件类型会随 `T` 的联合分发，`T` 为 `SegmentType` 时得到按 `type` 区分的联合，
- * 从而可以通过 `segment.type` 收窄出对应的 `data` 类型。
- */
-export type AnyMessageSegment<T extends SegmentType = SegmentType> = T extends SegmentType
-  ? {
-      type: T;
-      data: MessageSegmentMap[T];
-    }
-  : never;
