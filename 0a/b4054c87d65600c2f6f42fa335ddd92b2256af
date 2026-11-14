@@ -1,0 +1,25 @@
+packages/plugin/README.md
+  s_fa40f2c85a43d9::t_ed75b8802dbaaf 145
+  s_fa40f2c85a43d9::t_e9ba3185567baa 265-266
+  s_fa40f2c85a43d9::t_10bc879dc7a2bd 192-193
+  s_fa40f2c85a43d9::t_af3f4d86ec8d63 238,245-250,254-264
+  s_fa40f2c85a43d9::t_8351498f628612 18
+packages/plugin/src/index.ts
+  s_fa40f2c85a43d9::t_913a9c9d1baee6 7-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0ab4054c87d65600c2f6f42fa335ddd92b2256af",
+  "prompts": {},
+  "sessions": {
+    "s_fa40f2c85a43d9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e273d3c90ffe7twu5dmiA3MIod",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
