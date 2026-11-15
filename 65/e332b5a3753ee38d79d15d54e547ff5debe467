@@ -1,0 +1,14 @@
+packages/plugin/src/index.ts
+  h_7037025082b470 14-15,18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "65e332b5a3753ee38d79d15d54e547ff5debe467",
+  "prompts": {},
+  "humans": {
+    "h_7037025082b470": {
+      "author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
