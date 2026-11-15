@@ -1,13 +1,31 @@
 import type { Part } from '@/types/message-part';
-import type { Bot, MessageEvent, MetaEvent, NoticeEvent, RequestEvent } from '@xopenbot/onebot';
+import type {
+  Bot,
+  BotImpl,
+  StandardAPI,
+  MessageEvent,
+  MetaEvent,
+  NoticeEvent,
+  RequestEvent
+} from '@xopenbot/onebot';
 
 type MaybePromise<T> = T | Promise<T>;
 type None = void | undefined | null;
 
-export interface PluginInfo {
+export interface Manifest {
+  /** 依赖的Bot API，缺失可能运行异常 **/
+  depsOn: Partial<{
+    [key in StandardAPI]: true;
+  }> & {
+    [key: string]: true;
+  };
+}
+
+export interface PluginInfo<M extends Manifest = Manifest> {
   name: string;
   version: string;
   description: string;
+  manifest?: M;
 }
 
 export interface ExecResult {
@@ -23,45 +41,50 @@ export interface ScheduleTask {
   task: (fireDate: Date) => MaybePromise<boolean>;
 }
 
-export interface Command {
+export interface Command<M extends Manifest = Manifest> {
   name: string;
   pattern: string | RegExp;
   priority: number;
-  execute: (input: string, ctx: PluginContext, args?: string[]) => MaybePromise<ExecResult | None>;
+  execute: (
+    input: string,
+    ctx: PluginContext<M>,
+    args?: string[]
+  ) => MaybePromise<ExecResult | None>;
 }
 
-export type ListenerCallback<T = unknown> = (
-  ctx: PluginContext & { event: T }
+// eslint-disable-next-line
+export type ListenerCallback<M extends Manifest, T = any> = (
+  ctx: PluginContext<M> & { event: T }
 ) => MaybePromise<None>;
 
-export interface ListenerCallbackInfo {
-  callback: ListenerCallback;
+export interface ListenerCallbackInfo<M extends Manifest = Manifest> {
+  callback: ListenerCallback<M>;
   fn?: (e: unknown) => void;
   pluginName: string;
 }
 
-export type Listener = {
-  message?: ListenerCallback<MessageEvent> | ListenerCallback<MessageEvent>[];
-  request?: ListenerCallback<RequestEvent> | ListenerCallback<RequestEvent>[];
-  notice?: ListenerCallback<NoticeEvent> | ListenerCallback<NoticeEvent>[];
-  meta?: ListenerCallback<MetaEvent> | ListenerCallback<MetaEvent>[];
-} & Record<string, ListenerCallback | ListenerCallback[]>;
+export type Listener<M extends Manifest = Manifest> = {
+  message?: ListenerCallback<M, MessageEvent> | ListenerCallback<M, MessageEvent>[];
+  request?: ListenerCallback<M, RequestEvent> | ListenerCallback<M, RequestEvent>[];
+  notice?: ListenerCallback<M, NoticeEvent> | ListenerCallback<M, NoticeEvent>[];
+  meta?: ListenerCallback<M, MetaEvent> | ListenerCallback<M, MetaEvent>[];
+} & Record<string, ListenerCallback<M> | ListenerCallback<M>[]>;
 
-export interface IPlugin {
-  info: PluginInfo;
+export interface IPlugin<M extends Manifest = Manifest> {
+  info: PluginInfo<M>;
   /** 插件可以定义init方法返回一些API，这些API会放到每个插件调用时的ctx **/
-  init?: (ctx: PluginContext) => MaybePromise<{ [key: string]: unknown }>;
+  init?: (ctx: PluginContext<M>) => MaybePromise<{ [key: string]: unknown }>;
   /** 命令 **/
-  loadCommand(ctx: PluginContext): MaybePromise<Command[]>;
+  loadCommand(ctx: PluginContext<M>): MaybePromise<Command<M>[]>;
   /** 定时任务 **/
-  loadSchedule?(ctx: PluginContext): MaybePromise<ScheduleTask[]>;
+  loadSchedule?(ctx: PluginContext<M>): MaybePromise<ScheduleTask[]>;
   /** 事件监听 **/
-  loadListener?(ctx: PluginContext): MaybePromise<Listener>;
+  loadListener?(ctx: PluginContext<M>): MaybePromise<Listener<M>>;
 }
 
-export interface PluginContext {
+export interface PluginContext<M extends Manifest = Manifest> {
   logger: LikeLogger;
-  bot: Bot;
+  bot: BotImpl<keyof M['depsOn'] & keyof Bot>;
   state: Record<string, unknown>;
   emit: (event: string, ...args: unknown[]) => void;
   [key: string]: unknown;

@@ -52,3 +52,22 @@ function mergeTwo(
   }
   return result;
 }
+
+/** 递归冻结对象 **/
+export function freezeObject(obj: object) {
+  freezeDeep(obj, new WeakSet());
+}
+
+function freezeDeep(obj: object, seen: WeakSet<object>) {
+  if (seen.has(obj)) {
+    return;
+  }
+  seen.add(obj);
+  Object.freeze(obj);
+  for (const key of Reflect.ownKeys(obj)) {
+    const value = (obj as Record<PropertyKey, unknown>)[key];
+    if (value && typeof value === 'object') {
+      freezeDeep(value, seen);
+    }
+  }
+}

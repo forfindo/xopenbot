@@ -1,10 +1,11 @@
-import { mergeObject } from '@/utils/merge';
+import { mergeObject } from '@/utils/object';
 import { cancelJob, type Job, scheduleJob } from 'node-schedule';
 import type {
   Command,
   IPlugin,
   LikeLogger,
   ListenerCallbackInfo,
+  Manifest,
   PluginContext,
   PluginInfo,
   ProcessResult,
@@ -15,12 +16,7 @@ import type { Bot } from '@xopenbot/onebot';
 import { EventEmitter } from 'node:events';
 import { extraSubEvents } from '@/utils/event';
 
-function normalizePattern(pattern: string | RegExp): RegExp {
-  if (typeof pattern === 'string') {
-    return new RegExp(pattern.startsWith('^') ? pattern : '^' + pattern);
-  }
-  return pattern.source.startsWith('^') ? pattern : new RegExp('^' + pattern.source, pattern.flags);
-}
+const BOT_EVENTS = new Set(['message', 'request', 'notice', 'meta']);
 
 export class Workspace {
   private plugins: (PluginInfo & { loadTime: number })[] = [];
@@ -88,17 +84,25 @@ export class Workspace {
 
   private listen(name: string) {
     for (const key of Object.keys(this.listeners)) {
-      const values = this.listeners[key]!;
-      values.forEach(cbInfo => {
-        if (cbInfo.pluginName !== name) {
-          return;
-        }
-        const pluginContext = {
-          logger: this.logger,
-          bot: this.bot,
-          emit: this.emit,
-          state: this.states[cbInfo.pluginName] || {}
-        } satisfies PluginContext;
+      const targets = this.listeners[key]!.filter(cbInfo => cbInfo.pluginName === name);
+      if (!targets.length) {
+        continue;
+      }
+
+      const isBotEvent = BOT_EVENTS.has(key);
+      if (isBotEvent && (!this.bot.on || !this.bot.off)) {
+        this.logger.warn(`插件 ${name} 无法监听 ${key} 事件：Bot 未同时提供 on/off 方法`);
+        continue;
+      }
+
+      const pluginContext = {
+        logger: this.logger,
+        bot: this.bot,
+        emit: this.emit,
+        state: this.states[name] || {}
+      } satisfies PluginContext;
+
+      for (const cbInfo of targets) {
         cbInfo.fn = (e: unknown) => {
           try {
             const result = cbInfo.callback({
@@ -114,29 +118,28 @@ export class Workspace {
         };
         switch (key) {
           case 'message':
-            this.bot.on?.('message', cbInfo.fn);
+            this.bot.on!('message', cbInfo.fn);
             break;
           case 'notice':
-            this.bot.on?.('notice', cbInfo.fn);
+            this.bot.on!('notice', cbInfo.fn);
             break;
           case 'request':
-            this.bot.on?.('request', cbInfo.fn);
+            this.bot.on!('request', cbInfo.fn);
             break;
           case 'meta':
-            this.bot.on?.('meta', cbInfo.fn);
+            this.bot.on!('meta', cbInfo.fn);
             break;
           default:
             this.emitter.on(key, cbInfo.fn);
         }
-      });
+      }
     }
   }
 
   private cancelListen(pluginName: string) {
     for (const key of Object.keys(this.listeners)) {
       const values = this.listeners[key]!;
-      const isBotEvent =
-        key === 'message' || key === 'notice' || key === 'request' || key === 'meta';
+      const isBotEvent = BOT_EVENTS.has(key);
       const matched = values.filter(item => item.pluginName === pluginName && item.fn);
       if (matched.length && isBotEvent && !this.bot.off) {
         this.logger.warn(`bot 未实现 off 方法，无法取消插件 ${pluginName} 对 ${key} 事件的监听`);
@@ -190,6 +193,7 @@ export class Workspace {
     const name = plugin.info.name;
     try {
       // —— 准备阶段：只计算、不碰 this.*，任何抛错都安全 ——
+      checkManifest(this.bot, this.logger, plugin.info);
       const state: Record<string, unknown> = {};
       const ctx: PluginContext = {
         logger: this.logger,
@@ -319,5 +323,27 @@ export class Workspace {
 
   listPlugin() {
     return this.plugins;
+  }
+}
+
+function normalizePattern(pattern: string | RegExp): RegExp {
+  if (typeof pattern === 'string') {
+    return new RegExp(pattern.startsWith('^') ? pattern : '^' + pattern);
+  }
+  return pattern.source.startsWith('^') ? pattern : new RegExp('^' + pattern.source, pattern.flags);
+}
+
+function checkManifest<M extends Manifest>(bot: Bot, logger: LikeLogger, info: PluginInfo<M>) {
+  const depsOn = info.manifest?.depsOn;
+  if (!depsOn) {
+    return;
+  }
+  for (const key of Object.keys(depsOn)) {
+    if (!depsOn[key]) {
+      continue;
+    }
+    if (!bot[key]) {
+      logger.warn(`插件${info.name}依赖Bot API：${key}，请实现该API或联系插件开发者`);
+    }
   }
 }

@@ -28,10 +28,10 @@ interface ExtendedAction {
  */
 interface StandardBot {
   /** 机器人自身信息 **/
-  selfInfo?: UserInfo;
+  readonly selfInfo?: UserInfo;
 
   /** 日志 **/
-  logger?: {
+  readonly logger?: {
     debug(...args: unknown[]): void;
     info(...args: unknown[]): void;
     warn(...args: unknown[]): void;

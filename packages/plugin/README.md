@@ -4,19 +4,22 @@ xopenbot 的插件工作区。负责插件的加载、命令注册、消息匹�
 
 一个插件通过 `loadCommand()` 返回若干条命令；命令由 `pattern` 匹配输入，由 `execute` 产出消息内容。`Workspace` 是一个类，需要先 `new` 出一个实例；一个实例管理一组插件、命令、定时任务与插件私有状态，并支持 `init` 向命令上下文注入 API。
 
+推荐使用 `definePlugin()` 定义插件，并通过 `info.manifest.depsOn` 声明依赖的 Bot API；声明后 `ctx.bot` 会按依赖收窄类型。
+
 ## 目录结构
 
 ```
 packages/plugin
 ├── src
 │   ├── index.ts             # 包入口，统一导出
+│   ├── plugin.ts            # definePlugin 辅助函数
 │   ├── workspace.ts         # 插件工作区、命令注册与分发
 │   ├── types
 │   │   ├── message-part.ts  # 消息段类型 Part
-│   │   └── workspace.ts     # 插件、命令、定时任务等类型定义
+│   │   └── workspace.ts     # Manifest、插件、命令、定时任务等类型定义
 │   └── utils
 │       ├── event.ts         # 事件名层级拆分
-│       ├── merge.ts         # 深层次对象合并
+│       ├── object.ts        # 深层次对象合并、递归冻结
 │       └── type-guard.ts    # 类型守卫
 ├── package.json
 ├── rollup.config.js         # 构建配置（输出 dist）
@@ -48,12 +51,12 @@ pnpm lint
 
 ### 1. 编写插件
 
-插件是一个实现了 `IPlugin` 的对象：
+插件是一个实现了 `IPlugin` 的对象，推荐用 `definePlugin()` 创建：
 
 ```ts
-import type { Command, IPlugin } from '@xopenbot/plugin';
+import { definePlugin, type Command } from '@xopenbot/plugin';
 
-export const echoPlugin: IPlugin = {
+export const echoPlugin = definePlugin({
   info: {
     name: 'echo',
     version: '1.0.0',
@@ -81,10 +84,54 @@ export const echoPlugin: IPlugin = {
       }
     ];
   }
-};
+});
 ```
 
-### 2. 注册插件
+`definePlugin()` 只是原样返回传入的对象，并递归冻结 `info`（含 `manifest`），防止插件信息在运行时被修改。直接写 `const plugin: IPlugin = {...}` 也可以，效果相同。
+
+### 2. 声明依赖（manifest）
+
+插件通过 `info.manifest.depsOn` 声明自己用到的 Bot API。声明后 `ctx.bot` 上对应的成员会从可选变成必填（仅在类型层面），并在插件注册时被检查：
+
+```ts
+import { definePlugin } from '@xopenbot/plugin';
+
+export const noticePlugin = definePlugin({
+  info: {
+    name: 'notice',
+    version: '1.0.0',
+    description: '依赖声明示例',
+    manifest: {
+      depsOn: {
+        selfInfo: true, // 标准 API，有类型补全
+        tts: true       // 扩展 API，通过字符串索引签名放行
+      }
+    }
+  },
+  loadCommand(ctx) {
+    const uid = ctx.bot.selfInfo.user_id; // 声明后不再是可选
+    ctx.bot.tts();
+    return [];
+  }
+});
+```
+
+- `depsOn` 的键来自 `StandardAPI`（即 `keyof StandardBot` 去掉 `on` / `off`），标准 API 有补全；扩展 API 的名字通过字符串索引签名放行，因此写错名字无法在编译期发现，只会在注册时收到告警。
+- 不写 `manifest` 时，`ctx.bot` 保持 `Bot` 类型（所有可选项都需要自己判空），也不会做依赖检查。
+- 注册时 `Workspace` 会遍历 `depsOn`，bot 上缺少对应成员只记录 `logger.warn`，**不会阻止插件加载**。声明依赖意味着你在类型上信任运行时 bot 一定实现了它，请自行确认。
+- 如果 manifest 不内联，请用 `satisfies` 而不是类型标注，否则字面量类型会被拓宽，`ctx.bot` 的收窄会失效：
+
+```ts
+import type { Manifest } from '@xopenbot/plugin';
+
+// 保留字面量类型
+const manifest = { depsOn: { sendGroupMessage: true } } satisfies Manifest;
+
+// 错误：拓宽成 Manifest，ctx.bot 不会收窄
+const manifest: Manifest = { depsOn: { sendGroupMessage: true } };
+```
+
+### 3. 注册插件
 
 ```ts
 import { Workspace } from '@xopenbot/plugin';
@@ -106,7 +153,7 @@ await workspace.registry(echoPlugin, anotherPlugin);
 
 单个插件加载抛错不会影响其他插件注册，错误会记录在 `result.failure` 中。
 
-### 3. 处理消息
+### 4. 处理消息
 
 ```ts
 const outputs = await workspace.process('echo 你好', {});
@@ -136,7 +183,7 @@ const outputs = await workspace.process('echo 你好', {});
 }
 ```
 
-### 4. 卸载插件
+### 5. 卸载插件
 
 ```ts
 workspace.deregister('echo');
@@ -144,7 +191,7 @@ workspace.deregister('echo');
 
 `deregister` 按插件的 `info.name` 删除该插件的插件信息、全部命令、`init` 注入的 API 与该插件的 `state`，取消它的所有定时任务，并移除 `loadListener` 注册的全部事件监听。重复注册同名插件时会先自动执行一次 `deregister`，因此插件状态会重置，监听器也不会重复挂载。
 
-### 5. 定时任务
+### 6. 定时任务
 
 插件可以实现 `loadSchedule()` 返回要注册的定时任务，`cron` 使用标准 cron 表达式：
 
@@ -188,7 +235,7 @@ const workspace = new Workspace(bot, logger);
 插件的 `init` / `loadCommand` / `loadSchedule` / `loadListener` 以及命令的 `execute` 都会收到一个 `ctx`，包含：
 
 - `logger`：`LikeLogger`，工作区注入的日志对象；
-- `bot`：构造 `Workspace` 时传入的 bot 实例；
+- `bot`：构造 `Workspace` 时传入的 bot 实例，类型由插件的 `manifest.depsOn` 收窄；
 - `state`：该插件专属的状态对象，跨命令/定时任务持久，重复注册同名插件会重置；
 - `emit`：`(event: string, ...args: unknown[]) => void`，向工作区事件总线派发事件。事件名带 `.` 时会按层级依次触发（`a.b.c` 依次触发 `a`、`a.b`、`a.b.c` 的监听器）。
 
@@ -258,6 +305,15 @@ loadListener() {
 execute(input, ctx) {
   ctx.emit('my.custom', { input });
   return { content: [{ type: 'text', text: '已派发' }] };
+}
+```
+
+内置事件的 `ctx.event` 会按事件类型收窄（`message` 为 `MessageEvent`，`request` 为 `RequestEvent` 等）；自定义事件的 `ctx.event` 是 `any`，需要自己断言：
+
+```ts
+'my.custom': ctx => {
+  const e = ctx.event as { input: string };
+  ctx.logger.debug(e.input);
 }
 ```
 
