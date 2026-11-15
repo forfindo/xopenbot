@@ -7,7 +7,8 @@ import {
   type StandardAPI,
   toCQCode as msg2cq,
   fromCQCode,
-  type GroupInfo
+  type GroupInfo,
+  isExtendedSegment
 } from '@xopenbot/onebot';
 import https from 'https';
 import http from 'http';
@@ -327,7 +328,7 @@ const onmessage = async (data: DataType) => {
     // vm只处理文本
     let message = '';
     for (const v of data.message) {
-      if (v.type === 'text') {
+      if (v.type === 'text' && !isExtendedSegment(v)) {
         message += v.data.text;
       }
     }
@@ -639,7 +640,7 @@ const $ = {
     if (!msg) {
       return;
     }
-    callApi('sendMessage', ['private', uid, fromCQCode(msg)]).catch(() => {});
+    callApi('sendPrivateMessage', [uid, fromCQCode(msg)]).catch(() => {});
   },
   sendGroupMsg: (gid: string, msg: string) => {
     gid = String(gid);
@@ -647,15 +648,7 @@ const $ = {
     if (!msg) {
       return;
     }
-    callApi('sendMessage', ['group', gid, fromCQCode(msg)]).catch(() => {});
-  },
-  sendDiscussMsg: (id: string, msg: string) => {
-    msg = filter(msg) || '';
-    id = String(id);
-    if (!msg) {
-      return;
-    }
-    callApi('sendMessage', ['channel', id, fromCQCode(msg)]).catch(() => {});
+    callApi('sendGroupMessage', [gid, fromCQCode(msg)]).catch(() => {});
   },
   deleteMsg: (message_id: string) => {
     message_id = String(message_id);
