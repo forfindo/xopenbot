@@ -11,6 +11,8 @@ export type {
   PluginContext,
   ProcessResult,
   RegistryResult,
-  ScheduleTask
+  ScheduleTask,
+  Manifest
 } from './types/workspace';
 export type { Image, Part, Text } from './types/message-part';
+export { definePlugin } from './plugin';
