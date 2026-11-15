@@ -157,7 +157,7 @@ const init = async (bot: Bot | Bot[], cfg?: Config) => {
   }
   bots.clear();
   for (const b of bot) {
-    const uid = b.selfInfo?.user_id || (await b.getSelfInfo())?.user_id;
+    const uid = b.selfInfo?.user_id || (await b.getSelfInfo!())?.user_id;
     if (!uid) {
       throw new TypeError('uid不能为空');
     }
