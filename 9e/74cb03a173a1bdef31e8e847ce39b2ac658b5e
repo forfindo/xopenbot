@@ -1,0 +1,14 @@
+packages/sandbox/src/index.ts
+  h_7037025082b470 160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "9e74cb03a173a1bdef31e8e847ce39b2ac658b5e",
+  "prompts": {},
+  "humans": {
+    "h_7037025082b470": {
+      "author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
