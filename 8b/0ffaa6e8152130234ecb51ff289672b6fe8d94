@@ -1,0 +1,16 @@
+packages/sandbox/package.json
+  h_7037025082b470 3
+packages/sandbox/src/bridge.ts
+  h_7037025082b470 10-11,331,643,651
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8b0ffaa6e8152130234ecb51ff289672b6fe8d94",
+  "prompts": {},
+  "humans": {
+    "h_7037025082b470": {
+      "author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
