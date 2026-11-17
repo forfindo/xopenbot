@@ -1,6 +1,6 @@
 {
   "name": "@xopenbot/onebot",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "OneBot 12类型声明",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,6 +8,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rollup -c",
+    "tarball": "rollup -c && pnpm pack",
     "prepublishOnly": "pnpm build"
   },
   "exports": {

@@ -18,9 +18,11 @@ import type { FriendInfo, UserInfo } from './user/actions';
 import type { MessageEvent } from './event';
 import type { MetaEvent } from './meta/events';
 
-/** 拓展action **/
-interface ExtendedAction {
-  [name: string]: (...args: unknown[]) => MaybePromise<unknown>;
+/**
+ * 拓展能力：既可以是扩展 action 函数，也可以是普通数据字段。
+ */
+interface ExtendedAPI {
+  [name: string]: unknown;
 }
 
 /**
@@ -59,20 +61,20 @@ interface StandardBot {
   // -------------------------------------------------------------------------
 
   /** 获取最新事件列表 */
-  getLatestEvents(
+  getLatestEvents?(
     limit?: number,
     timeout?: number,
     options?: Record<string, unknown>
   ): MaybePromise<OneBotEvent[]>;
 
   /** 获取支持的动作列表 */
-  getSupportedActions(options?: Record<string, unknown>): MaybePromise<string[]>;
+  getSupportedActions?(options?: Record<string, unknown>): MaybePromise<string[]>;
 
   /** 获取运行状态 */
-  getStatus(options?: Record<string, unknown>): MaybePromise<Status>;
+  getStatus?(options?: Record<string, unknown>): MaybePromise<Status>;
 
   /** 获取版本信息 */
-  getVersion(options?: Record<string, unknown>): MaybePromise<VersionInfo>;
+  getVersion?(options?: Record<string, unknown>): MaybePromise<VersionInfo>;
 
   // -------------------------------------------------------------------------
   // 消息动作
@@ -293,8 +295,34 @@ interface StandardBot {
   getFileFragmented?(params: GetFileFragmentedParams): MaybePromise<GetFileFragmentedResult>;
 }
 
-export type Bot = StandardBot & ExtendedAction;
+export type BotAPIOptions = Partial<{
+  [key in Exclude<StandardAPI, 'selfInfo' | 'logger'>]: 'function';
+}> & {
+  selfInfo?: 'field';
+  logger?: 'field';
+} & {
+  [key: string]: 'function' | 'field';
+};
 
-export type BotImpl<T extends keyof Bot> = Pick<Required<Bot>, T> & Bot;
+export type Bot = StandardBot & ExtendedAPI;
+
+// eslint-disable-next-line
+type BotFunction<Args extends any[]> = (
+  ...args: [...Args, Record<string, unknown>?]
+) => MaybePromise<unknown>;
+
+// eslint-disable-next-line
+type BotImplValue<K extends PropertyKey, V, Args extends any[]> = K extends keyof StandardBot
+  ? NonNullable<StandardBot[K]>
+  : [V] extends ['field']
+    ? unknown
+    : BotFunction<Args>;
+
+// eslint-disable-next-line
+export type BotImpl<T extends BotAPIOptions, Args extends any[] = any[]> = {
+  [K in keyof T]-?: BotImplValue<K, T[K], Args>;
+} & {
+  [K in Exclude<keyof StandardBot, keyof T>]?: StandardBot[K];
+};
 
 export type StandardAPI = Exclude<keyof StandardBot, 'on' | 'off'>;

@@ -4,8 +4,7 @@
 [OneBot 接口定义](https://github.com/botuniverse/onebot/tree/master/specs/interface)
 编写。包内绝大多数导出都是类型：
 
-- `Bot`：应用端机器人接口类型，声明协议规定的全部标准动作方法，并通过索引签名
-  兼容扩展动作；
+- `Bot` / `BotImpl` / `BotAPIOptions`：应用端机器人接口、实现约束与依赖选项类型；
 - 全部标准动作的参数与响应类型（`ActionMap`）；
 - 元事件、消息事件、通知事件、请求事件及扩展事件的类型；
 - 10 种标准消息段与扩展消息段；
@@ -127,35 +126,30 @@ type Platform = PlatformActionName; // 除元动作外的标准动作
 的小驼峰形式，参数按动作参数顺序展开，最后一个可选参数 `options` 用于携带扩展参数；
 返回值即动作响应中的 `data`，可以是同步值或 `Promise`（`MaybePromise<T>`）。
 
-标准动作、`on` / `off` 都声明为**可选成员**，直接调用时需要使用可选链，或用
-`BotImpl` 声明必须实现的成员：
+标准动作、`selfInfo`、`logger`、`on` / `off` 都声明为**可选成员**，直接调用时需要使用
+可选链：
 
 ```ts
-import type { Bot, BotImpl } from '@xopenbot/onebot';
+import type { Bot } from '@xopenbot/onebot';
 
 declare const bot: Bot;
 
 const info = await bot.getSelfInfo?.(); // get_self_info
 const result = await bot.sendMessage?.('group', '你好'); // send_message
-
-// BotImpl 把指定成员变为必选
-declare const impl: BotImpl<'sendMessage' | 'getSelfInfo'>;
-await impl.sendMessage('group', '你好');
-await impl.getSelfInfo();
 ```
 
-`Bot` 由标准动作与扩展动作两部分交叉而成：
+`Bot` 由标准动作与扩展 API 两部分交叉而成：
 
 ```ts
-/** 拓展动作 */
-interface ExtendedAction {
-  [name: string]: (...args: unknown[]) => MaybePromise<unknown>;
+/** 拓展能力：既可以是扩展 action 函数，也可以是普通数据字段。 */
+interface ExtendedAPI {
+  [name: string]: unknown;
 }
 
 /** 标准动作与事件回调 */
 interface StandardBot {
-  selfInfo?: UserInfo;
-  logger?: {
+  readonly selfInfo?: UserInfo;
+  readonly logger?: {
     debug(...args: unknown[]): void;
     info(...args: unknown[]): void;
     warn(...args: unknown[]): void;
@@ -174,8 +168,40 @@ interface StandardBot {
   // ... 其余标准动作
 }
 
-export type Bot = StandardBot & ExtendedAction;
+export type Bot = StandardBot & ExtendedAPI;
 ```
+
+#### 必选成员与依赖声明
+
+`BotAPIOptions` 描述一个 Bot 实现实际提供了哪些成员，以及每个成员是函数还是数据字段
+（`'function'` / `'field'`）。`BotImpl<T>` 把 `T` 中声明的成员变为**必选**，未声明的
+标准成员仍保持可选：
+
+```ts
+import type { BotAPIOptions, BotImpl } from '@xopenbot/onebot';
+
+const options = {
+  sendGroupMessage: 'function', // 标准动作
+  selfInfo: 'field', // 标准字段
+  uid: 'field', // 扩展字段
+  tts: 'function' // 扩展动作
+} as const satisfies BotAPIOptions;
+
+declare const impl: BotImpl<typeof options>;
+
+await impl.sendGroupMessage('123456', '你好'); // 必选，保留精确签名
+impl.selfInfo.user_id; // 必选
+impl.uid; // 扩展字段，类型为 unknown
+impl.tts('内容'); // 扩展动作，返回 MaybePromise<unknown>
+await impl.getGroupInfo?.('123456'); // 未声明，仍为可选
+```
+
+- 标准动作在 `BotAPIOptions` 中只能写 `'function'`；`selfInfo`、`logger` 只能写
+  `'field'`；扩展成员两种都可以。
+- 扩展方式声明的函数默认接受任意参数，返回 `MaybePromise<unknown>`。第二个泛型参数
+  可以约束参数列表：`BotImpl<T, [string]>` 时扩展函数签名为
+  `(arg: string, options?: Record<string, unknown>) => MaybePromise<unknown>`。
+- `BotImpl` 只影响类型，运行时仍需自行保证 Bot 实例实现了对应成员。
 
 需要留意的几点：
 
@@ -184,8 +210,8 @@ export type Bot = StandardBot & ExtendedAction;
   `notice` 重载的监听器参数在源码中写作 `RequestEvent | ExtendedEvent<'notice'>`；
 - 由于 `Bot` 包含字符串索引签名，`class ... implements Bot` 需要类自身也声明
   兼容的索引签名。实现端通常先定义自己的类或对象，在作为 `Bot` 使用时再断言类型；
-- 另导出 `StandardAPI = Exclude<keyof StandardBot, 'on'>`，表示标准成员键名的联合
-  类型（注意它只排除了 `on`，仍包含 `off`、`selfInfo` 和 `logger`）。
+- 另导出 `StandardAPI = Exclude<keyof StandardBot, 'on' | 'off'>`，表示标准成员键名
+  的联合类型（仍包含 `selfInfo` 和 `logger`）。
 
 建立连接、发送动作请求等具体逻辑由使用者实现。
 
