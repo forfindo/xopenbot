@@ -1,0 +1,35 @@
+packages/onebot/__tests__/bot.type.check.ts
+  s_5b3946815b9344::t_a078030dc935b8 3,10
+  s_5b3946815b9344::t_c50bffda6a679a 1-2,4-6,11-14
+  s_5b3946815b9344::t_f0d9f9b62df719 7-9,15-18
+packages/onebot/src/bot.ts
+  s_5b3946815b9344::t_3a868ba72bd1f9 21-22,64,71,74,77,298,300-305,322
+  s_5b3946815b9344::t_92ba69deb8e219 23-25,299,306-321,323-326
+packages/onebot/README.md
+  s_d7ba5bb47146e5::t_686c3c33149d77 7
+  s_d7ba5bb47146e5::t_2b46564d52312b 129-130,133,141,144-146,151-152,171,174-205,213-214
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a7d10312ba6d564e756eddafd5669ecccd2f801a",
+  "prompts": {},
+  "sessions": {
+    "s_5b3946815b9344": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1628021fffekGLqd4mPC71glv",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_d7ba5bb47146e5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e15bd292effe8HuhGz8sPM0o4b",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
