@@ -1,8 +1,7 @@
 import type { Part } from '@/types/message-part';
 import type {
-  Bot,
   BotImpl,
-  StandardAPI,
+  BotAPIOptions,
   MessageEvent,
   MetaEvent,
   NoticeEvent,
@@ -11,17 +10,17 @@ import type {
 
 type MaybePromise<T> = T | Promise<T>;
 type None = void | undefined | null;
+type IsAny<T> = 0 extends 1 & T ? true : false;
+
+// eslint-disable-next-line
+type AnyBot = any;
 
 export interface Manifest {
   /** 依赖的Bot API，缺失可能运行异常 **/
-  depsOn: Partial<{
-    [key in StandardAPI]: true;
-  }> & {
-    [key: string]: true;
-  };
+  depsOn: BotAPIOptions;
 }
 
-export interface PluginInfo<M extends Manifest = Manifest> {
+export interface PluginInfo<M extends Manifest> {
   name: string;
   version: string;
   description: string;
@@ -41,7 +40,7 @@ export interface ScheduleTask {
   task: (fireDate: Date) => MaybePromise<boolean>;
 }
 
-export interface Command<M extends Manifest = Manifest> {
+export interface Command<M extends Manifest> {
   name: string;
   pattern: string | RegExp;
   priority: number;
@@ -57,20 +56,20 @@ export type ListenerCallback<M extends Manifest, T = any> = (
   ctx: PluginContext<M> & { event: T }
 ) => MaybePromise<None>;
 
-export interface ListenerCallbackInfo<M extends Manifest = Manifest> {
+export interface ListenerCallbackInfo<M extends Manifest> {
   callback: ListenerCallback<M>;
   fn?: (e: unknown) => void;
   pluginName: string;
 }
 
-export type Listener<M extends Manifest = Manifest> = {
+export type Listener<M extends Manifest> = {
   message?: ListenerCallback<M, MessageEvent> | ListenerCallback<M, MessageEvent>[];
   request?: ListenerCallback<M, RequestEvent> | ListenerCallback<M, RequestEvent>[];
   notice?: ListenerCallback<M, NoticeEvent> | ListenerCallback<M, NoticeEvent>[];
   meta?: ListenerCallback<M, MetaEvent> | ListenerCallback<M, MetaEvent>[];
 } & Record<string, ListenerCallback<M> | ListenerCallback<M>[]>;
 
-export interface IPlugin<M extends Manifest = Manifest> {
+export interface IPlugin<M extends Manifest> {
   info: PluginInfo<M>;
   /** 插件可以定义init方法返回一些API，这些API会放到每个插件调用时的ctx **/
   init?: (ctx: PluginContext<M>) => MaybePromise<{ [key: string]: unknown }>;
@@ -82,9 +81,9 @@ export interface IPlugin<M extends Manifest = Manifest> {
   loadListener?(ctx: PluginContext<M>): MaybePromise<Listener<M>>;
 }
 
-export interface PluginContext<M extends Manifest = Manifest> {
+export interface PluginContext<M extends Manifest> {
   logger: LikeLogger;
-  bot: BotImpl<keyof M['depsOn'] & keyof Bot>;
+  bot: IsAny<M> extends true ? AnyBot : BotImpl<M['depsOn']>;
   state: Record<string, unknown>;
   emit: (event: string, ...args: unknown[]) => void;
   [key: string]: unknown;

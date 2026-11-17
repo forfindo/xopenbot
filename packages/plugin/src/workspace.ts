@@ -18,16 +18,25 @@ import { extraSubEvents } from '@/utils/event';
 
 const BOT_EVENTS = new Set(['message', 'request', 'notice', 'meta']);
 
+// Workspace 不在编译期校验插件泛型，依赖由 checkManifest 在运行时校验
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type AnyPlugin = IPlugin<any>;
+type AnyCommand = Command<any>;
+type AnyPluginInfo = PluginInfo<any>;
+type AnyListenerInfo = ListenerCallbackInfo<any>;
+type AnyPluginContext = PluginContext<any>;
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 export class Workspace {
-  private plugins: (PluginInfo & { loadTime: number })[] = [];
-  private commands: (Command & { plugin: string })[] = [];
+  private plugins: (AnyPluginInfo & { loadTime: number })[] = [];
+  private commands: (AnyCommand & { plugin: string })[] = [];
   /** 根据插件名字 **/
   private apis: { [key: string]: { [key: string]: unknown } } = {};
   /** 定时任务列表 **/
   private tasks: (ScheduleTask & { plugin: string })[] = [];
   private runningTask: Job[] = [];
   private states: Record<string, Record<string, unknown>> = {};
-  private listeners: Record<string, ListenerCallbackInfo[]> = {};
+  private listeners: Record<string, AnyListenerInfo[]> = {};
   private readonly logger: LikeLogger;
   private readonly bot: Bot;
   private emitter: EventEmitter = new EventEmitter();
@@ -100,7 +109,7 @@ export class Workspace {
         bot: this.bot,
         emit: this.emit,
         state: this.states[name] || {}
-      } satisfies PluginContext;
+      } satisfies AnyPluginContext;
 
       for (const cbInfo of targets) {
         cbInfo.fn = (e: unknown) => {
@@ -189,13 +198,13 @@ export class Workspace {
     }
   }
 
-  private async load(plugin: IPlugin) {
+  private async load(plugin: AnyPlugin) {
     const name = plugin.info.name;
     try {
       // —— 准备阶段：只计算、不碰 this.*，任何抛错都安全 ——
-      checkManifest(this.bot, this.logger, plugin.info);
+      checkManifest(this.bot, plugin.info as PluginInfo<Manifest>);
       const state: Record<string, unknown> = {};
-      const ctx: PluginContext = {
+      const ctx: AnyPluginContext = {
         logger: this.logger,
         bot: this.bot,
         emit: this.emit,
@@ -262,7 +271,7 @@ export class Workspace {
     }
   }
 
-  async registry(...plugins: IPlugin[]): Promise<RegistryResult> {
+  async registry(...plugins: AnyPlugin[]): Promise<RegistryResult> {
     const result: RegistryResult = {
       ok: true,
       failure: []
@@ -333,7 +342,7 @@ function normalizePattern(pattern: string | RegExp): RegExp {
   return pattern.source.startsWith('^') ? pattern : new RegExp('^' + pattern.source, pattern.flags);
 }
 
-function checkManifest<M extends Manifest>(bot: Bot, logger: LikeLogger, info: PluginInfo<M>) {
+function checkManifest(bot: Bot, info: PluginInfo<Manifest>) {
   const depsOn = info.manifest?.depsOn;
   if (!depsOn) {
     return;
@@ -343,7 +352,7 @@ function checkManifest<M extends Manifest>(bot: Bot, logger: LikeLogger, info: P
       continue;
     }
     if (!bot[key]) {
-      logger.warn(`插件${info.name}依赖Bot API：${key}，请实现该API或联系插件开发者`);
+      throw new Error(`插件${info.name}依赖Bot API：${key}，请实现该API或联系插件开发者`);
     }
   }
 }
