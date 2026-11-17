@@ -1,0 +1,53 @@
+packages/plugin/src/types/workspace.ts
+  s_8df352ff584802::t_bce00f5e8e5546 13-16,59
+  s_8df352ff584802::t_5e155b631128d4 86
+packages/plugin/__tests__/workspace.type.check.ts
+  s_8df352ff584802::t_82fc17237fda68 40-61
+  s_8df352ff584802::t_b2a1f5198c3c41 37-39
+packages/plugin/README.md
+  s_d7ba5bb47146e5::t_214f49ace586a6 125
+  s_d7ba5bb47146e5::t_2ae6d415f82bce 261
+  s_8df352ff584802::t_2ec4193cc9f0d6 204,206
+  s_d7ba5bb47146e5::t_5655ffd18b69d8 175
+  s_d7ba5bb47146e5::t_f2dd64e086fc2d 95-98,110-111,124,133,136
+  s_8df352ff584802::t_86cbe6167f941c 57,65-66
+  s_d7ba5bb47146e5::t_83eda49459f291 91
+  s_d7ba5bb47146e5::t_8cae869350e0b1 7
+  s_8df352ff584802::t_52f89cb273ca03 123,126
+  s_d7ba5bb47146e5::t_b78d5087072e2d 243
+  s_d7ba5bb47146e5::t_8adaaf072b0653 271
+packages/plugin/src/plugin.ts
+  s_8df352ff584802::t_ed9ef2506493d5 4
+packages/plugin/src/workspace.ts
+  s_8df352ff584802::t_1a923885f76651 112
+  s_8df352ff584802::t_21a9496dd89dcc 274
+  s_8df352ff584802::t_34134a9e3f9b80 345
+  s_8df352ff584802::t_1d87cb4584482d 201,207
+  s_8df352ff584802::t_61834eac03bf3a 205
+  s_8df352ff584802::t_4a6922b6724f90 355
+  s_8df352ff584802::t_323fc7b14b7604 21-29,31-32,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1c5f6267ef1bab83ac013132b99a966ee573f70e",
+  "prompts": {},
+  "sessions": {
+    "s_8df352ff584802": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1b26a80bffe9GLF2SJBWWFG87",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_d7ba5bb47146e5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e15bd292effe8HuhGz8sPM0o4b",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
