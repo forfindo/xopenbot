@@ -1,327 +1,76 @@
 # @xopenbot/plugin
 
-xopenbot 的插件工作区。负责插件的加载、命令注册、消息匹配与分发、定时任务调度，以及插件卸载。
+xopenbot 的插件工作区。负责插件的加载、命令注册、消息匹配与分发、定时任务调度，以及
+插件卸载。
 
-一个插件通过 `loadCommand()` 返回若干条命令；命令由 `pattern` 匹配输入，由 `execute` 产出消息内容。`Workspace` 是一个类，需要先 `new` 出一个实例；一个实例管理一组插件、命令、定时任务与插件私有状态，并支持 `init` 向命令上下文注入 API。
+一个插件通过 `loadCommand()` 返回命令；命令由 `pattern` 匹配输入，由 `execute` 产出
+消息内容。`Workspace` 管理插件、命令、定时任务与插件私有状态，并支持通过 `init` 向
+命令上下文注入 API。
 
-推荐使用 `definePlugin()` 定义插件，并通过 `info.manifest.depsOn` 声明依赖的 Bot API；声明后 `ctx.bot` 的类型会变成必然包含这些成员的 `BotImpl`，未声明的标准成员仍保持可选。
-
-## 目录结构
-
-```
-packages/plugin
-├── src
-│   ├── index.ts             # 包入口，统一导出
-│   ├── plugin.ts            # definePlugin 辅助函数
-│   ├── workspace.ts         # 插件工作区、命令注册与分发
-│   ├── types
-│   │   ├── message-part.ts  # 消息段类型 Part
-│   │   └── workspace.ts     # Manifest、插件、命令、定时任务等类型定义
-│   └── utils
-│       ├── event.ts         # 事件名层级拆分
-│       ├── object.ts        # 深层次对象合并、递归冻结
-│       └── type-guard.ts    # 类型守卫
-├── package.json
-├── rollup.config.js         # 构建配置（输出 dist）
-└── tsconfig.json
-```
-
-## 安装与构建
-
-在仓库根目录安装依赖：
+## 安装
 
 ```bash
-pnpm install
+pnpm add @xopenbot/plugin
 ```
 
-构建与检查：
-
-```bash
-# 构建（rollup，输出到 dist）
-pnpm --filter @xopenbot/plugin build
-
-# 类型检查（仓库根目录）
-pnpm check
-
-# 代码检查（仓库根目录）
-pnpm lint
-```
-
-## 快速开始
-
-### 1. 编写插件
-
-插件是一个实现了 `IPlugin` 的对象，推荐用 `definePlugin()` 创建：
+## 最小示例
 
 ```ts
-import { definePlugin } from '@xopenbot/plugin';
+import { definePlugin, Workspace } from '@xopenbot/plugin';
 
-export const echoPlugin = definePlugin({
+const echoPlugin = definePlugin({
   info: {
     name: 'echo',
     version: '1.0.0',
     description: '复读机示例'
   },
-  // 不要标注返回类型，交给 definePlugin 依据 manifest 推断，ctx.bot 才能收窄
   loadCommand() {
     return [
       {
         name: 'echo',
-        // 匹配到的片段会被截掉，剩余部分作为 execute 的 input
-        // pattern 未以 ^ 开头时会自动补上 ^（字符串与正则都适用）
         pattern: /^echo\s*/i,
-        // 数字越小越先执行（全局按 priority 升序排列）
         priority: 100,
         execute(input) {
-          if (!input) {
-            return {
-              content: [{ type: 'text', text: '用法：echo <内容>' }]
-            };
-          }
           return {
-            content: [{ type: 'text', text: input }]
+            content: [{ type: 'text', text: input || '用法：echo <内容>' }]
           };
         }
       }
     ];
   }
 });
-```
-
-`definePlugin()` 使用 `const` 泛型原样返回传入的对象，并递归冻结 `info`（含 `manifest`），防止插件信息在运行时被修改。也可以手写 `const plugin: IPlugin<Manifest> = {...}`，但此时 `M` 固定为 `Manifest`，`ctx.bot` 不会按具体 `depsOn` 收窄，因此推荐优先使用 `definePlugin()`。
-
-### 2. 声明依赖（manifest）
-
-插件通过 `info.manifest.depsOn` 声明自己用到的 Bot API。`depsOn` 的取值来自
-`BotAPIOptions`（定义在 `@xopenbot/onebot`）：标准动作写 `'function'`，`selfInfo` /
-`logger` 写 `'field'`，扩展成员两种都可以。声明后 `ctx.bot` 上对应的成员会从可选变成
-必填（仅在类型层面），并在插件注册时被检查：
-
-```ts
-import { definePlugin } from '@xopenbot/plugin';
-
-export const noticePlugin = definePlugin({
-  info: {
-    name: 'notice',
-    version: '1.0.0',
-    description: '依赖声明示例',
-    manifest: {
-      depsOn: {
-        selfInfo: 'field', // 标准字段，有类型补全
-        tts: 'function' // 扩展动作，通过字符串索引签名放行
-      }
-    }
-  },
-  loadCommand(ctx) {
-    const uid = ctx.bot.selfInfo.user_id; // 声明后不再是可选
-    ctx.bot.tts();
-    return [];
-  }
-});
-```
-
-- `depsOn` 的键来自 `StandardAPI`（即 `keyof StandardBot` 去掉 `on` / `off`），标准 API 有补全；扩展 API 的名字通过字符串索引签名放行，因此写错名字无法在编译期发现，只会在注册时报错。
-- 值 `'function'` / `'field'` 会参与 `BotImpl` 类型推导：声明为函数的成员可以直接调用，声明为字段的成员可以直接读取。标准动作只能声明为 `'function'`，`selfInfo`、`logger` 只能声明为 `'field'`。
-- 不写 `manifest` 时，`M` 会退化为 `Manifest`，`ctx.bot` 上所有标准成员都会被当作必选，扩展成员会被当作函数；但运行时不会做依赖检查，仍需自行保证 bot 实现了它们。需要精确控制类型时请显式声明 `manifest.depsOn`。
-- 注册时 `Workspace` 会遍历 `depsOn`，bot 上缺少对应成员会抛出错误，该插件加载失败并记录到 `result.failure`，其他插件不受影响。声明依赖意味着你在类型上信任运行时 bot 一定实现了它。
-- 如果 manifest 不内联，请用 `satisfies` 而不是类型标注，否则字面量类型会被拓宽，`ctx.bot` 的收窄会失效：
-
-```ts
-import type { Manifest } from '@xopenbot/plugin';
-
-// 保留字面量类型
-const manifest = { depsOn: { sendGroupMessage: 'function' } } satisfies Manifest;
-
-// 错误：拓宽成 Manifest，ctx.bot 不会收窄
-const manifest: Manifest = { depsOn: { sendGroupMessage: 'function' } };
-```
-
-### 3. 注册插件
-
-```ts
-import { Workspace } from '@xopenbot/plugin';
-import { echoPlugin } from './plugins/echo';
 
 const workspace = new Workspace(bot);
-const result = await workspace.registry(echoPlugin);
+await workspace.registry(echoPlugin);
 
-if (!result.ok) {
-  console.error('插件加载失败：', result.failure);
-}
-```
-
-`registry` 也支持一次注册多个插件：
-
-```ts
-await workspace.registry(echoPlugin, anotherPlugin);
-```
-
-单个插件加载抛错不会影响其他插件注册，错误会记录在 `result.failure` 中。
-
-### 4. 处理消息
-
-```ts
 const outputs = await workspace.process('echo 你好', {});
-
-// [
-//   {
-//     plugin: 'echo',
-//     name: 'echo',
-//     content: [{ type: 'text', text: '你好' }]
-//   }
-// ]
+// [{ plugin: 'echo', name: 'echo', content: [{ type: 'text', text: '你好' }] }]
 ```
 
-返回值的 `content` 是 `Part[]`，如何转换成 QQ 消息由调用方决定。`process` 的第二个参数是额外的消息上下文，会合并进命令 `execute` 的 `ctx`；但 `logger`、`bot`、`emit`、`state` 由工作区强制覆盖，传入的同名键不会生效。
+## 核心能力
 
-命令默认在第一个命中后停止匹配，只有 `execute` 返回 `{ next: true }` 时才会继续尝试后续命令，最终的返回值会是多个命令结果的数组。
+- 命令：`pattern` 支持字符串或正则，按 `priority` 升序执行。
+- 依赖声明：`info.manifest.depsOn` 声明所需的 Bot API，注册时校验并收窄 `ctx.bot`。
+- 插件上下文：`ctx` 提供 `logger`、`bot`、`state`、`emit`。
+- 生命周期：支持 `init`、`loadCommand`、`loadSchedule`、`loadListener`。
+- 卸载：`workspace.deregister(name)` 清理命令、任务、监听与状态。
 
-`execute` 的第三个参数是 `pattern` 的捕获组（`result.slice(1)`）：
+## 包边界
 
-```ts
-{
-  pattern: /^set\s+(\w+)\s+(.+)$/i,
-  execute(input, ctx, args) {
-    const [key, value] = args ?? [];
-    return { content: [{ type: 'text', text: `${key}=${value}` }] };
-  }
-}
+- 只负责插件管理与命令分发，不直接发送 QQ 消息。
+- 命令产出的 `content` 是 `Part[]`，如何转换成 QQ 消息由调用方决定。
+- 依赖 `@xopenbot/onebot` 的类型契约。
+
+## 文档
+
+完整 API 文档见 [`docs/plugin`](https://github.com/forfindo/xopenbot/blob/main/docs/plugin/index.md)，
+包括 `Workspace` API、`IPlugin` / `Command` / `ScheduleTask` 类型、manifest 推导、
+上下文合并顺序、定时任务与事件监听。
+
+## 开发
+
+```bash
+pnpm --filter @xopenbot/plugin build
+pnpm check
+pnpm lint
 ```
-
-### 5. 卸载插件
-
-```ts
-workspace.deregister('echo');
-```
-
-`deregister` 按插件的 `info.name` 删除该插件的插件信息、全部命令、`init` 注入的 API 与该插件的 `state`，取消它的所有定时任务，并移除 `loadListener` 注册的全部事件监听。重复注册同名插件时会先自动执行一次 `deregister`，因此插件状态会重置，监听器也不会重复挂载。
-
-### 6. 定时任务
-
-插件可以实现 `loadSchedule()` 返回要注册的定时任务，`cron` 使用标准 cron 表达式：
-
-```ts
-import type { IPlugin, Manifest, ScheduleTask } from '@xopenbot/plugin';
-
-const reminderPlugin: IPlugin<Manifest> = {
-  info: { name: 'reminder', version: '1.0.0', description: '定时提醒' },
-  loadCommand() {
-    return [];
-  },
-  loadSchedule(): ScheduleTask[] {
-    return [
-      {
-        name: 'daily',
-        cron: '0 0 9 * * *',
-        task(fireDate) {
-          // 返回 true 表示执行成功，false 表示失败
-          console.log('触发时间：', fireDate);
-          return true;
-        }
-      }
-    ];
-  }
-};
-
-const workspace = new Workspace(bot);
-await workspace.registry(reminderPlugin);
-```
-
-任务以 `插件名_任务名` 作为唯一标识；同名任务不会重复注册，非法 `cron` 会记录错误并跳过。
-
-`Workspace` 的构造器第一个参数是 `bot`（会作为 `ctx.bot` 传给每个插件），第二个参数可以传入一个 logger；不传时会依次回退到 `bot.logger`、`console`。定时任务执行的成功/失败会记录到它：
-
-```ts
-const workspace = new Workspace(bot, logger);
-```
-
-## 插件上下文（ctx）
-
-插件的 `init` / `loadCommand` / `loadSchedule` / `loadListener` 以及命令的 `execute` 都会收到一个 `ctx`，包含：
-
-- `logger`：`LikeLogger`，工作区注入的日志对象；
-- `bot`：构造 `Workspace` 时传入的 bot 实例，类型为 `BotImpl<manifest.depsOn>`，`depsOn` 中声明过的成员会变为必选；
-- `state`：该插件专属的状态对象，跨命令/定时任务持久，重复注册同名插件会重置；
-- `emit`：`(event: string, ...args: unknown[]) => void`，向工作区事件总线派发事件。事件名带 `.` 时会按层级依次触发（`a.b.c` 依次触发 `a`、`a.b`、`a.b.c` 的监听器）。
-
-```ts
-loadCommand(ctx) {
-  ctx.state.count = 0;   // 初始化状态
-  return [...];
-}
-
-execute(input, ctx) {
-  ctx.state.count += 1;
-  return { content: [{ type: 'text', text: `已执行 ${ctx.state.count} 次` }] };
-}
-```
-
-## init
-
-插件可以定义 `init(ctx)` 返回一些 API，这些 API 会合并进所有插件命令 `execute` 时的 `ctx`。合并顺序为：`init` API → `process` 传入的额外上下文 → 工作区保留字段（`logger` / `bot` / `emit` / `state`），后者会覆盖前者：
-
-```ts
-init(ctx) {
-  return { db: new Database(ctx.state) };
-}
-```
-
-## 消息段（Part）
-
-`ExecResult.content` 与 `ProcessResult.content` 都是可选的 `Part[]`，目前支持两种消息段：
-
-```ts
-// 文本
-{ type: 'text', text: '你好' }
-
-// 图片：path 为必填，content 为可选的补充内容（如 base64）
-{ type: 'image', path: 'https://example.com/a.png' }
-```
-
-## 查询已注册插件
-
-```ts
-const plugins = workspace.listPlugin();
-// [{ name: 'echo', version: '1.0.0', description: '复读机示例', loadTime: 1700000000000 }]
-```
-
-## 事件监听
-
-插件可以实现 `loadListener()` 返回 `Listener`：键为事件名，值为回调或回调数组。工作区会在插件注册完成后自动挂载监听，并在 `deregister` 时移除：
-
-```ts
-loadListener() {
-  return {
-    message: ctx => {
-      ctx.logger.debug('收到消息');
-    },
-    // 同一个事件也可以注册多个回调
-    'my.custom': [
-      ctx => ctx.logger.debug('自定义事件', ctx.event),
-      ctx => ctx.logger.debug('第二个回调')
-    ]
-  };
-}
-```
-
-内置事件 `message` / `request` / `notice` / `meta` 会监听 bot 的对应事件；其余事件名注册在工作区事件总线上，可通过 `ctx.emit` 派发：
-
-```ts
-execute(input, ctx) {
-  ctx.emit('my.custom', { input });
-  return { content: [{ type: 'text', text: '已派发' }] };
-}
-```
-
-内置事件的 `ctx.event` 会按事件类型收窄（`message` 为 `MessageEvent`，`request` 为 `RequestEvent` 等）；自定义事件的 `ctx.event` 是 `any`，需要自己断言：
-
-```ts
-'my.custom': ctx => {
-  const e = ctx.event as { input: string };
-  ctx.logger.debug(e.input);
-}
-```
-
-事件名带 `.` 时会按层级派发：`ctx.emit('a.b.c')` 会依次触发 `a`、`a.b`、`a.b.c` 的监听器。回调的 `ctx.event` 是派发时传入的第一个参数。
-
-监听回调支持同步或异步（返回 `Promise`）。回调抛错或被 reject 时只会记录到 `logger.error`，不会影响同一事件上的其他监听器。
