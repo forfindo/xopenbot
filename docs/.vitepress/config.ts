@@ -4,7 +4,7 @@ export default defineConfig({
   title: 'xopenbot',
   description: 'API文档',
   base: '/xopenbot/',
-  head: [['link', { rel: 'icon', href: '/xopenbot/imgs/favicon.ico' }]],
+  head: [['link', { rel: 'icon', href: '/xopenbot/favicon.ico' }]],
   themeConfig: {
     logo: '/imgs/logo.png',
     nav: [
