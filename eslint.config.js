@@ -36,7 +36,7 @@ export default defineConfig(
       globals: globals.node,
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['vitest.config.ts']
+          allowDefaultProject: ['vitest.config.ts', 'docs/.vitepress/config.ts']
         },
         tsconfigRootDir: import.meta.dirname
       }
