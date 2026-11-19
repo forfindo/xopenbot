@@ -1,0 +1,14 @@
+tsconfig.json
+  h_7037025082b470 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "75f3fd1a3a6a101d957f89c722653ca221bc5379",
+  "prompts": {},
+  "humans": {
+    "h_7037025082b470": {
+      "author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
