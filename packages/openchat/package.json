@@ -16,7 +16,7 @@
   },
   "scripts": {
     "build": "rollup -c",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "migration": "node script/migration.js",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [],
@@ -73,7 +73,8 @@
     "venice-ai-sdk-provider": "2.0.1",
     "web-tree-sitter": "0.25.10",
     "which": "7.0.0",
-    "zod": "4.1.8"
+    "zod": "4.1.8",
+    "immer": "11.1.4"
   },
   "files": [
     "./dist/**/*",
@@ -85,7 +86,8 @@
     "@types/npm-package-arg": "6.1.4",
     "@types/npmcli__arborist": "6.3.3",
     "@types/npmcli__config": "6.0.4",
-    "@types/which": "3.0.4"
+    "@types/which": "3.0.4",
+    "drizzle-kit": "1.0.0-rc.2"
   },
   "engines": {
     "node": ">=22.16"
