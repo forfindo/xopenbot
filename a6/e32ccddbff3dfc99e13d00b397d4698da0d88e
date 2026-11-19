@@ -1,0 +1,70 @@
+docs/plugin/reference/workspace.md
+  s_2c418f1d191e99::t_e26cfbb188a013 1-50
+docs/onebot/guide/message.md
+  s_2c418f1d191e99::t_ae792a62debf88 1-53
+docs/onebot/guide/event.md
+  s_2c418f1d191e99::t_31be5003cbba25 1-106
+docs/onebot/reference/exports.md
+  s_2c418f1d191e99::t_968f5fc7958ea7 1-31
+docs/onebot/guide/action.md
+  s_2c418f1d191e99::t_7781a74c318ada 1-101
+docs/plugin/guide/listener.md
+  s_2c418f1d191e99::t_c8d4bf84ce27bd 1-64
+docs/plugin/reference/types.md
+  s_2c418f1d191e99::t_d8cd9282efce49 1-87
+docs/plugin/dev.md
+  s_2c418f1d191e99::t_b3fba00a7fe0e5 1-42
+docs/plugin/guide/plugin.md
+  s_2c418f1d191e99::t_86fa130d6c4c65 1-126
+docs/onebot/index.md
+  s_2c418f1d191e99::t_30153955f51844 25-36
+docs/sandbox/guide/api.md
+  s_2c418f1d191e99::t_bdaece6ef5932c 1-76
+docs/.vitepress/config.ts
+  s_2c418f1d191e99::t_a372a4fc0e9400 16-87,94-96
+  s_2c418f1d191e99::t_09bfd078de92e3 88-93
+docs/sandbox/index.md
+  s_2c418f1d191e99::t_a5b2fc68c38273 12-22,64
+docs/onebot/guide/bot.md
+  s_2c418f1d191e99::t_044042b708960b 1-146
+docs/sandbox/internals/architecture.md
+  s_2c418f1d191e99::t_ac85cf49435cd6 1-74
+docs/sandbox/security.md
+  s_2c418f1d191e99::t_2a5a16890831d7 1-76
+docs/onebot/dev.md
+  s_2c418f1d191e99::t_355fd9feeb2d0f 1-53
+docs/plugin/guide/command.md
+  s_2c418f1d191e99::t_32f38bfe4a1c09 1-55
+docs/plugin/index.md
+  s_2c418f1d191e99::t_8ebc587a057045 17-29,44,46,59,67,71
+docs/onebot/reference/retcode.md
+  s_2c418f1d191e99::t_fdbc0807c8522f 1-61
+docs/plugin/guide/context.md
+  s_2c418f1d191e99::t_082d5834e7a249 1-73
+docs/sandbox/internals/async.md
+  s_2c418f1d191e99::t_ffe116beeef1dc 1-45
+docs/sandbox/dev.md
+  s_2c418f1d191e99::t_bbb89fa6ca6731 1-34
+docs/plugin/guide/schedule.md
+  s_2c418f1d191e99::t_709e5385f66681 1-47
+packages/onebot/AGENTS.md
+  s_2c418f1d191e99::t_d68e275b1e005e 43-45
+docs/sandbox/internals/builtin-api.md
+  s_2c418f1d191e99::t_fa6c6ae7e48774 1-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a6e32ccddbff3dfc99e13d00b397d4698da0d88e",
+  "prompts": {},
+  "sessions": {
+    "s_2c418f1d191e99": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e0c43b2b9ffejAo92lY2jpomTh",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
