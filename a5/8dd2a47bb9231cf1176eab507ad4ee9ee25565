@@ -1,0 +1,14 @@
+packages/openchat/package.json
+  h_7037025082b470 19,76-77,89-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a58dd2a47bb9231cf1176eab507ad4ee9ee25565",
+  "prompts": {},
+  "humans": {
+    "h_7037025082b470": {
+      "author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
