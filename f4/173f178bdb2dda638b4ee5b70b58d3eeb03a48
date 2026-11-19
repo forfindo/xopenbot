@@ -1,0 +1,22 @@
+.github/workflows/deploy.yml
+  h_7037025082b470 40
+docs/package.json
+  h_7037025082b470 1-20
+package.json
+  h_7037025082b470 15-17
+pnpm-lock.yaml
+  h_7037025082b470 74-79,3243-3244,6233,7744
+pnpm-workspace.yaml
+  h_7037025082b470 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "f4173f178bdb2dda638b4ee5b70b58d3eeb03a48",
+  "prompts": {},
+  "humans": {
+    "h_7037025082b470": {
+      "author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
