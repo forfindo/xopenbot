@@ -2,7 +2,7 @@
   "extends": "./tsconfig.compiler.json",
   "references": [
     {
-      "path": "./packages/agentic-rag"
+      "path": "./packages/sandbox"
     },
     {
       "path": "./packages/bot"
