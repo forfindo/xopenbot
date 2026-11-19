@@ -1,0 +1,14 @@
+packages/sandbox/tsconfig.json
+  h_7037025082b470 18-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "51425f6ca69bbb0bdf7cd44ebf43c7cd022b323d",
+  "prompts": {},
+  "humans": {
+    "h_7037025082b470": {
+      "author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
