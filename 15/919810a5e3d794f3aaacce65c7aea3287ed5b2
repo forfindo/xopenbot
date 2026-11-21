@@ -1,0 +1,19 @@
+eslint.config.js
+  s_eb52038437d5f1::t_263b7efafa1e05 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "15919810a5e3d794f3aaacce65c7aea3287ed5b2",
+  "prompts": {},
+  "sessions": {
+    "s_eb52038437d5f1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e026bdf07ffeUWapOwSDiuSt8y",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
