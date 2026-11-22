@@ -1,0 +1,29 @@
+packages/sandbox/src/bridge.ts
+  s_590370fc5bcc51::t_98245097873cf8 443-447,449,452-458,461,469,474-476,479,486-493
+  s_590370fc5bcc51::t_089d470503c0c0 38-41
+  s_590370fc5bcc51::t_0e48e3ec8b9a4e 539,543-544,546,549,554,556-561,563-565,567-569
+  s_590370fc5bcc51::t_4e0d6df16f5168 583
+  s_590370fc5bcc51::t_1c8e68efb8ebb3 636
+  s_590370fc5bcc51::t_5a2e1151f416c1 42-44
+docs/sandbox/internals/builtin-api.md
+  s_590370fc5bcc51::t_384c098c09a20f 66-128
+  s_590370fc5bcc51::t_bf33512c0975c8 12
+docs/sandbox/internals/async.md
+  s_590370fc5bcc51::t_7d35c5adeab202 45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d994abd8faa7ab3cdaeb30d218195a6df178c44a",
+  "prompts": {},
+  "sessions": {
+    "s_590370fc5bcc51": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_dfeea74b5ffepNvMYKUpGOH4j2",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
