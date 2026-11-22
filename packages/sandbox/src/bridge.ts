@@ -12,6 +12,8 @@ import {
 } from '@xopenbot/onebot';
 import https from 'https';
 import http from 'http';
+import { HttpsProxyAgent, type HttpsProxyAgentOptions } from 'https-proxy-agent';
+import { HttpProxyAgent } from 'http-proxy-agent';
 import zlib from 'zlib';
 import isValidUTF8 from 'utf-8-validate';
 import crypto from 'crypto';
@@ -33,6 +35,16 @@ type CheckCallApi = { method: StandardAPI | (string & {}); params: unknown[] };
 type CallApiResponse = { echo: string; data: unknown; error: boolean };
 type DataType = MessageEvent | NoticeEvent | RequestEvent;
 type FetchCallback = (res: unknown) => void;
+/**
+ * 代理配置：可直接传代理地址字符串，或传 `{ url, options }`；
+ * `options` 会透传给 http(s)-proxy-agent。
+ */
+type ProxyOption =
+  | string
+  | {
+      url: string;
+      options?: HttpsProxyAgentOptions<unknown>;
+    };
 
 type OnMessageEvent =
   | SaveContextEvent
@@ -428,16 +440,25 @@ sandbox.include('clearTimeout', function (id: unknown) {
  *
  * 四个入口的区别：
  * - `fetch(url, place?, callback?)`：默认 GET，`place` 可传 RequestOptions
- *   (method/headers/timeout 等) 或直接传回调，最终转调 `request`。
- * - `fetch.get(url, headers?, callback?)`：GET 语法糖，第二参数是请求头或回调。
- * - `fetch.post(url, body?, headers?, callback?)`：POST 语法糖，第二参数是请求体，
- *   第三参数是请求头或回调。
+ *   (method/headers/timeout/proxy 等) 或直接传回调，最终转调 `request`。
+ * - `fetch.get(url, place?, callback?)`：GET 语法糖，`place` 可传 RequestOptions
+ *   或回调；请求头需要放在 `headers` 字段内。
+ * - `fetch.post(url, body?, place?, callback?)`：POST 语法糖，第二参数是请求体，
+ *   第三参数可传 RequestOptions 或回调；`place.body` 会覆盖第二参数。
  * - `fetch.request(url, options, callback)`：最底层的通用方法，必须显式传 options
- *   (含 method/headers/body/timeout)，get/post/fetch 内部都调用它。
+ *   (含 method/headers/body/timeout/proxy)，get/post/fetch 内部都调用它。
  * 注：`Object.assign(fetch, temp)` 使 fetch 同时拥有 get/post/request。
+ *
+ * 代理：
+ * - RequestOptions 支持可选 `proxy` 字段：字符串代理地址，或 `{ url, options }`；
+ *   `options` 会透传给 http(s)-proxy-agent。
+ * - 目标 URL 为 `https:` 时使用 HttpsProxyAgent，否则使用 HttpProxyAgent；
+ *   代理地址本身支持 `http:` / `https:`。
+ * - 同时传入 `agent` 时，由 `proxy` 生成的 agent 优先。
  *
  * 注意事项：
  * - body 默认按 JSON 序列化，content-type 非 application/json 时原样发送。
+ * - 传入的 options 会被浅拷贝，不会被修改，可安全复用。
  * - 响应内容上限 500KB；超时默认 DEFAULT_REQUEST_TIMEOUT，最大 TIMEOUT_MAX。
  * - 省略回调时请求照常发出，但不处理结果。
  *
@@ -445,50 +466,64 @@ sandbox.include('clearTimeout', function (id: unknown) {
  * // GET
  * fetch('https://example.com/api');
  * fetch('https://example.com/api', { headers: { 'user-agent': 'bot' } });
- * fetch.get('https://example.com/api', { accept: 'application/json' }, res => {});
+ * fetch.get('https://example.com/api', { headers: { accept: 'application/json' } }, res => {});
  *
  * @example
  * // POST
  * fetch.post('https://example.com/api', { key: 'value' });
- * fetch.post('https://example.com/api', { key: 'value' }, { 'content-type': 'application/json' }, res => {});
+ * fetch.post('https://example.com/api', { key: 'value' }, {
+ *   headers: { 'content-type': 'application/json' }
+ * }, res => {});
  *
  * @example
- * // 自定义请求(支持 method / headers / timeout 等 RequestOptions)
+ * // 自定义请求(支持 method / headers / timeout / proxy 等 RequestOptions)
  * fetch.request('https://example.com/api', {
  *   method: 'put',
  *   headers: { 'content-type': 'application/json' },
  *   timeout: 10000,
  *   body: { key: 'value' }
  * }, res => {});
+ *
+ * @example
+ * // 代理
+ * fetch('https://example.com/api', { proxy: 'http://127.0.0.1:7890' }, res => {});
+ * fetch.get('https://example.com/api', {
+ *   headers: { accept: 'application/json' },
+ *   proxy: { url: 'http://127.0.0.1:7890', options: { keepAlive: true } }
+ * }, res => {});
  */
 const temp = {
   get: function (
     url: string,
-    place?: http.OutgoingHttpHeaders | FetchCallback,
+    place?: (http.RequestOptions & { proxy?: ProxyOption }) | FetchCallback,
     callback?: FetchCallback
   ) {
     const options = {
-      method: 'get',
-      headers: typeof place !== 'function' && place ? place : {}
+      method: 'get'
     };
+    if (typeof place !== 'function') {
+      Object.assign(options, place);
+    }
     temp.request(url, options, callback ?? (typeof place === 'function' ? place : NoneFunction));
   },
   post: function (
     url: string,
     body?: unknown,
-    place?: http.OutgoingHttpHeaders | FetchCallback,
+    place?: (http.RequestOptions & { proxy?: ProxyOption }) | FetchCallback,
     callback?: FetchCallback
   ) {
     const options = {
       method: 'post',
-      body: body,
-      headers: typeof place !== 'function' && place ? place : {}
+      body: body
     };
+    if (typeof place !== 'function') {
+      Object.assign(options, place);
+    }
     temp.request(url, options, callback ?? (typeof place === 'function' ? place : NoneFunction));
   },
   request: function (
     url: string,
-    options: http.RequestOptions & { body?: unknown },
+    options: http.RequestOptions & { body?: unknown; proxy?: ProxyOption },
     callback: FetchCallback = NoneFunction
   ) {
     if (typeof url !== 'string') {
@@ -501,32 +536,37 @@ const temp = {
       throw new TypeError('params(第二个参数)必须是对象。');
     }
     url = url.trim();
+    const { body, proxy, ...requestOptions } = options;
     const protocol = url.substring(0, 5) === 'https' ? https : http;
     const data: Uint8Array<ArrayBufferLike>[] = [];
     let size = 0;
-    if (!options.headers) {
-      options.headers = {};
+    if (!requestOptions.headers) {
+      requestOptions.headers = {};
     }
-    if (Array.isArray(options.headers)) {
+    if (Array.isArray(requestOptions.headers)) {
       throw new TypeError('headers 不支持数组形式。');
     }
-    const rawHeaders = options.headers as OutgoingHttpHeaders;
+    const rawHeaders = requestOptions.headers as OutgoingHttpHeaders;
     const headers: OutgoingHttpHeaders = {};
     for (const key of Object.keys(rawHeaders)) {
       headers[key.toLowerCase()] = rawHeaders[key];
     }
-    options.headers = headers;
+    requestOptions.headers = headers;
     Object.assign(headers, { 'accept-encoding': 'gzip' });
-    const body = options?.body;
-    delete options.body;
+    if (proxy) {
+      const { url: proxyUrl, options: o } = typeof proxy === 'string' ? { url: proxy } : proxy;
+      const u = new URL(proxyUrl);
+      requestOptions.agent =
+        protocol === https ? new HttpsProxyAgent(u, o) : new HttpProxyAgent(u, o);
+    }
     if (
-      typeof options.timeout !== 'number' ||
-      !Number.isFinite(options.timeout) ||
-      options.timeout <= 0
+      typeof requestOptions.timeout !== 'number' ||
+      !Number.isFinite(requestOptions.timeout) ||
+      requestOptions.timeout <= 0
     ) {
-      options.timeout = DEFAULT_REQUEST_TIMEOUT;
-    } else if (options.timeout > TIMEOUT_MAX) {
-      options.timeout = TIMEOUT_MAX;
+      requestOptions.timeout = DEFAULT_REQUEST_TIMEOUT;
+    } else if (requestOptions.timeout > TIMEOUT_MAX) {
+      requestOptions.timeout = TIMEOUT_MAX;
     }
     checkFrequency();
     const env = sandbox.getContext().data as DataType;
@@ -540,7 +580,7 @@ const temp = {
       asyncCallback(task, callback, [data]);
     };
     try {
-      const req = protocol.request(url, options, res => {
+      const req = protocol.request(url, requestOptions, res => {
         res.on('error', err => cb(err));
         const status = res.statusCode ?? 0;
         if (status < 200 || status >= 300) {
@@ -593,7 +633,7 @@ const temp = {
 };
 const fetch = function (
   url: string,
-  place?: http.RequestOptions | FetchCallback,
+  place?: (http.RequestOptions & { body?: unknown; proxy?: ProxyOption }) | FetchCallback,
   callback?: FetchCallback
 ) {
   const options = {

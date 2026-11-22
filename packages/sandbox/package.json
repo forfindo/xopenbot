@@ -19,6 +19,8 @@
   },
   "dependencies": {
     "@xopenbot/onebot": "workspace:*",
+    "http-proxy-agent": "9.1.0",
+    "https-proxy-agent": "9.1.0",
     "string.ify": "1.0.64",
     "utf-8-validate": "6.0.6"
   },

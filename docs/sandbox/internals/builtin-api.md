@@ -9,7 +9,7 @@ outline: deep
 | 名称 | 说明 |
 | --- | --- |
 | `$` | 机器人 API：`sendPrivateMsg`、`sendGroupMsg`、`sendDiscussMsg`、`deleteMsg`、`getGroupInfo`、`ajax`、`get` |
-| `fetch` | HTTP 请求，支持 `fetch.get`、`fetch.post`、`fetch.request` |
+| `fetch` | HTTP 请求，支持 `fetch.get`、`fetch.post`、`fetch.request` 与 http(s) 代理 |
 | `setTimeout` / `clearTimeout` | 受限的延时任务；`setTimeout` 返回数字 id，`clearTimeout` 接收该 id |
 | `crypto` | Node `crypto` 模块 |
 | `path` | Node `path` 模块 |
@@ -62,6 +62,69 @@ const timer = setTimeout(() => {
 // 需要时用同一个 id 取消
 clearTimeout(timer);
 ```
+
+## HTTP 请求与代理
+
+`fetch` 有四个入口：
+
+| 入口 | 说明 |
+| --- | --- |
+| `fetch(url, place?, callback?)` | 默认 GET；`place` 为 `RequestOptions` 或回调 |
+| `fetch.get(url, place?, callback?)` | GET 语法糖；`place` 为 `RequestOptions` 或回调 |
+| `fetch.post(url, body?, place?, callback?)` | POST 语法糖；`place` 为 `RequestOptions` 或回调，`place.body` 会覆盖第二参数 |
+| `fetch.request(url, options, callback?)` | 通用入口，必须显式传 `options` |
+
+`RequestOptions` 常用字段为 `method`、`headers`、`body`、`timeout`、`proxy`。请求头必须
+放在 `headers` 字段内：
+
+```js
+fetch.get(
+  'https://example.com/api',
+  {
+    headers: { accept: 'application/json' }
+  },
+  res => {
+    this.last_response = res;
+  }
+);
+```
+
+`proxy` 支持字符串地址，也支持 `{ url, options }` 形式：
+
+```js
+// 字符串形式
+fetch('https://example.com', { proxy: 'http://127.0.0.1:7890' }, res => {
+  this.last_response = res;
+});
+
+// 带 agent 选项
+fetch.request(
+  'https://example.com',
+  {
+    method: 'get',
+    proxy: {
+      url: 'http://127.0.0.1:7890',
+      options: { keepAlive: true }
+    }
+  },
+  res => {
+    this.last_response = res;
+  }
+);
+```
+
+代理说明：
+
+- 目标 URL 为 `https:` 时使用 `HttpsProxyAgent`，否则使用 `HttpProxyAgent`；
+  代理地址本身支持 `http:` / `https:`；
+- `proxy.options` 会透传给对应的 proxy agent；
+- 同时显式传入 `agent` 时，由 `proxy` 生成的 agent 优先；
+- 传入的 `options` 会被浅拷贝，不会被修改，可以安全复用；
+- 代理地址非法时会在发起请求时抛错。
+
+回调约定与其他异步能力一致：成功时收到响应体；非 2xx 时收到响应头（含
+`status-code`）；失败时收到 `Error`。请求同样受[异步任务与限流](/sandbox/internals/async)
+约束。
 
 ## 拓展机器人 API
 

@@ -277,6 +277,12 @@ importers:
       '@xopenbot/onebot':
         specifier: workspace:*
         version: link:../onebot
+      http-proxy-agent:
+        specifier: 9.1.0
+        version: 9.1.0
+      https-proxy-agent:
+        specifier: 9.1.0
+        version: 9.1.0
       string.ify:
         specifier: 1.0.64
         version: 1.0.64
