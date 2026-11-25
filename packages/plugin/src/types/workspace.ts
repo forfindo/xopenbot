@@ -40,51 +40,56 @@ export interface ScheduleTask {
   task: (fireDate: Date) => MaybePromise<boolean>;
 }
 
-export interface Command<M extends Manifest> {
+export interface Command<M extends Manifest = Manifest, C = unknown> {
   name: string;
   pattern: string | RegExp;
   priority: number;
   execute: (
     input: string,
-    ctx: PluginContext<M>,
+    ctx: PluginContext<M, C>,
     args?: string[]
   ) => MaybePromise<ExecResult | None>;
 }
 
 // eslint-disable-next-line
-export type ListenerCallback<M extends Manifest, T = any> = (
-  ctx: PluginContext<M> & { event: T }
+type AnyEvent = any;
+
+// eslint-disable-next-line
+export type ListenerCallback<M extends Manifest = Manifest, T = any, C = unknown> = (
+  ctx: PluginContext<M, C> & { event: T }
 ) => MaybePromise<None>;
 
-export interface ListenerCallbackInfo<M extends Manifest> {
-  callback: ListenerCallback<M>;
+export interface ListenerCallbackInfo<M extends Manifest = Manifest, C = unknown> {
+  callback: ListenerCallback<M, AnyEvent, C>;
   fn?: (e: unknown) => void;
   pluginName: string;
 }
 
-export type Listener<M extends Manifest> = {
-  message?: ListenerCallback<M, MessageEvent> | ListenerCallback<M, MessageEvent>[];
-  request?: ListenerCallback<M, RequestEvent> | ListenerCallback<M, RequestEvent>[];
-  notice?: ListenerCallback<M, NoticeEvent> | ListenerCallback<M, NoticeEvent>[];
-  meta?: ListenerCallback<M, MetaEvent> | ListenerCallback<M, MetaEvent>[];
-} & Record<string, ListenerCallback<M> | ListenerCallback<M>[]>;
+export type Listener<M extends Manifest = Manifest, C = unknown> = {
+  message?: ListenerCallback<M, MessageEvent, C> | ListenerCallback<M, MessageEvent, C>[];
+  request?: ListenerCallback<M, RequestEvent, C> | ListenerCallback<M, RequestEvent, C>[];
+  notice?: ListenerCallback<M, NoticeEvent, C> | ListenerCallback<M, NoticeEvent, C>[];
+  meta?: ListenerCallback<M, MetaEvent, C> | ListenerCallback<M, MetaEvent, C>[];
+} & Record<string, ListenerCallback<M, AnyEvent, C> | ListenerCallback<M, AnyEvent, C>[]>;
 
-export interface IPlugin<M extends Manifest> {
+export interface IPlugin<M extends Manifest = Manifest, C = unknown> {
   info: PluginInfo<M>;
   /** 插件可以定义init方法返回一些API，这些API会放到每个插件调用时的ctx **/
-  init?: (ctx: PluginContext<M>) => MaybePromise<{ [key: string]: unknown }>;
+  init?: (ctx: PluginContext<M, C>) => MaybePromise<{ [key: string]: unknown }>;
   /** 命令 **/
-  loadCommand(ctx: PluginContext<M>): MaybePromise<Command<M>[]>;
+  loadCommand(ctx: PluginContext<M, C>): MaybePromise<Command<M, C>[]>;
   /** 定时任务 **/
-  loadSchedule?(ctx: PluginContext<M>): MaybePromise<ScheduleTask[]>;
+  loadSchedule?(ctx: PluginContext<M, C>): MaybePromise<ScheduleTask[]>;
   /** 事件监听 **/
-  loadListener?(ctx: PluginContext<M>): MaybePromise<Listener<M>>;
+  loadListener?(ctx: PluginContext<M, C>): MaybePromise<Listener<M, C>>;
 }
 
-export interface PluginContext<M extends Manifest> {
+export interface PluginContext<M extends Manifest = Manifest, C = unknown> {
   logger: LikeLogger;
   bot: IsAny<M> extends true ? AnyBot : BotImpl<M['depsOn']>;
   state: Record<string, unknown>;
+  /** 注册该插件时传入的配置，注册后视为只读；修改需重新注册，运行期可变项用 state **/
+  config: C;
   emit: (event: string, ...args: unknown[]) => void;
   [key: string]: unknown;
 }

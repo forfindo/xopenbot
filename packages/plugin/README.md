@@ -51,7 +51,8 @@ const outputs = await workspace.process('echo 你好', {});
 
 - 命令：`pattern` 支持字符串或正则，按 `priority` 升序执行。
 - 依赖声明：`info.manifest.depsOn` 声明所需的 Bot API，注册时校验并收窄 `ctx.bot`。
-- 插件上下文：`ctx` 提供 `logger`、`bot`、`state`、`emit`。
+- 插件上下文：`ctx` 提供 `logger`、`bot`、`state`、`config`、`emit`。
+- 插件配置：用 `definePlugin<Config>()({...})` 声明配置类型，`workspace.registry({ plugin, config })` 注册时注入 `ctx.config`。
 - 生命周期：支持 `init`、`loadCommand`、`loadSchedule`、`loadListener`。
 - 卸载：`workspace.deregister(name)` 清理命令、任务、监听与状态。
 

@@ -48,6 +48,51 @@ export const echoPlugin = definePlugin({
 `const plugin: IPlugin<Manifest> = {...}`，但此时 `M` 固定为 `Manifest`，`ctx.bot`
 不会按具体 `depsOn` 收窄，因此推荐优先使用 `definePlugin()`。
 
+## 插件配置
+
+需要配置的插件用柯里化形式 `definePlugin<Config>()` 声明配置类型，注册时通过
+`{ plugin, config }` 传入，`Workspace` 会把配置注入该插件的 `ctx.config`：
+
+```ts
+import { definePlugin } from '@xopenbot/plugin';
+
+interface EchoConfig {
+  prefix: string;
+  times?: number;
+}
+
+export const echoPlugin = definePlugin<EchoConfig>()({
+  info: { name: 'echo', version: '1.0.0', description: '带配置的复读机' },
+  loadCommand(ctx) {
+    // ctx.config.prefix 已按 EchoConfig 收窄
+    return [
+      {
+        name: 'echo',
+        pattern: new RegExp(`^${ctx.config.prefix}echo\\s*`),
+        priority: 100,
+        execute(input) {
+          return { content: [{ type: 'text', text: input }] };
+        }
+      }
+    ];
+  }
+});
+
+// 注册时传入配置，字段类型与必填项会被校验
+await workspace.registry({
+  plugin: echoPlugin,
+  config: { prefix: '!' }
+});
+```
+
+- 不声明配置类型时 `ctx.config` 为 `unknown`；`definePlugin({...})` 的旧写法不变。
+- 不传配置时 `ctx.config` 为 `undefined`，需要必填配置的插件应使用
+  `definePlugin<Config>()`。
+- 同名插件重复注册会把 `config` 重置为最新一次传入的值。
+- `config` 注册后视为只读，修改需用新值重新 `registry`（会重建该插件的 `state`、定时
+  任务与监听）；运行期可变项请用 `ctx.state`。
+- `registry` 也支持混用：`workspace.registry(echoPlugin, { plugin: other, config })`。
+
 ## 声明依赖（manifest）
 
 插件通过 `info.manifest.depsOn` 声明自己用到的 Bot API。`depsOn` 的取值来自

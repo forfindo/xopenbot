@@ -20,12 +20,25 @@ const BOT_EVENTS = new Set(['message', 'request', 'notice', 'meta']);
 
 // Workspace 不在编译期校验插件泛型，依赖由 checkManifest 在运行时校验
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type AnyPlugin = IPlugin<any>;
-type AnyCommand = Command<any>;
+type AnyPlugin = IPlugin<any, any>;
+type AnyCommand = Command<any, any>;
 type AnyPluginInfo = PluginInfo<any>;
-type AnyListenerInfo = ListenerCallbackInfo<any>;
-type AnyPluginContext = PluginContext<any>;
+type AnyListenerInfo = ListenerCallbackInfo<any, any>;
+type AnyPluginContext = PluginContext<any, any>;
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+/** 插件对象或带配置的注册项 **/
+type PluginEntry = { plugin: AnyPlugin; config: unknown };
+type Registrable = AnyPlugin | PluginEntry;
+
+type ConfigOf<P> = P extends IPlugin<Manifest, infer C> ? C : unknown;
+type ValidateEntries<E extends readonly Registrable[]> = {
+  [K in keyof E]: E[K] extends { plugin: infer P extends AnyPlugin; config: infer C }
+    ? C extends ConfigOf<P>
+      ? E[K]
+      : { plugin: P; config: ConfigOf<P> }
+    : E[K];
+};
 
 export class Workspace {
   private plugins: (AnyPluginInfo & { loadTime: number })[] = [];
@@ -36,6 +49,7 @@ export class Workspace {
   private tasks: (ScheduleTask & { plugin: string })[] = [];
   private runningTask: Job[] = [];
   private states: Record<string, Record<string, unknown>> = {};
+  private configs: Record<string, unknown> = {};
   private listeners: Record<string, AnyListenerInfo[]> = {};
   private readonly logger: LikeLogger;
   private readonly bot: Bot;
@@ -108,7 +122,8 @@ export class Workspace {
         logger: this.logger,
         bot: this.bot,
         emit: this.emit,
-        state: this.states[name] || {}
+        state: this.states[name] || {},
+        config: this.configs[name]
       } satisfies AnyPluginContext;
 
       for (const cbInfo of targets) {
@@ -198,7 +213,7 @@ export class Workspace {
     }
   }
 
-  private async load(plugin: AnyPlugin) {
+  private async load(plugin: AnyPlugin, config: unknown) {
     const name = plugin.info.name;
     try {
       // —— 准备阶段：只计算、不碰 this.*，任何抛错都安全 ——
@@ -208,7 +223,8 @@ export class Workspace {
         logger: this.logger,
         bot: this.bot,
         emit: this.emit,
-        state
+        state,
+        config
       };
 
       const apis = await plugin.init?.(ctx);
@@ -226,6 +242,7 @@ export class Workspace {
       // —— 提交阶段：下面全是无抛错的纯内存操作 ——
       this.deregister(name);
       this.states[name] = state;
+      this.configs[name] = config;
       if (apis) {
         this.apis[name] = apis;
       }
@@ -271,13 +288,16 @@ export class Workspace {
     }
   }
 
-  async registry(...plugins: AnyPlugin[]): Promise<RegistryResult> {
+  async registry<const E extends readonly Registrable[]>(
+    ...entries: E & ValidateEntries<E>
+  ): Promise<RegistryResult> {
     const result: RegistryResult = {
       ok: true,
       failure: []
     };
-    for (const plugin of plugins) {
-      const errors = await this.load(plugin);
+    for (const entry of entries) {
+      const { plugin, config } = isPluginEntry(entry) ? entry : { plugin: entry, config: void 0 };
+      const errors = await this.load(plugin, config);
       if (errors) {
         result.ok = false;
         result.failure!.push(errors);
@@ -301,7 +321,8 @@ export class Workspace {
             logger: this.logger,
             bot: this.bot,
             emit: this.emit,
-            state: this.states[command.plugin] || {}
+            state: this.states[command.plugin] || {},
+            config: this.configs[command.plugin]
           },
           result.slice(1)
         );
@@ -327,12 +348,17 @@ export class Workspace {
     removed.forEach(item => this.cancelSchedule(item));
     Reflect.deleteProperty(this.apis, pluginName);
     Reflect.deleteProperty(this.states, pluginName);
+    Reflect.deleteProperty(this.configs, pluginName);
     this.cancelListen(pluginName);
   }
 
   listPlugin() {
     return this.plugins;
   }
+}
+
+function isPluginEntry(entry: Registrable): entry is PluginEntry {
+  return typeof entry === 'object' && entry !== null && 'plugin' in entry;
 }
 
 function normalizePattern(pattern: string | RegExp): RegExp {
