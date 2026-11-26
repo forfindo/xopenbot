@@ -1,0 +1,74 @@
+docs/plugin/index.md
+  s_57fb45a488cf62::t_885b7e17721b5d 44,53-58
+docs/plugin/reference/types.md
+  s_57fb45a488cf62::t_9fabc1f2448b60 39-40,43-44,46-47,51,56-60
+  s_57fb45a488cf62::t_c441bf56bf3d1b 62-79
+  s_57fb45a488cf62::t_ba465bd65e3a28 107-109
+  s_57fb45a488cf62::t_b7355782469fe7 61
+packages/sandbox/README.md
+  s_57fb45a488cf62::t_2162da5a7a7684 50-51
+packages/plugin/src/index.ts
+  s_57fb45a488cf62::t_e89bb44a40018c 19
+docs/plugin/guide/plugin.md
+  s_57fb45a488cf62::t_787a840226ebc0 12,22-27,29,32-36
+  s_57fb45a488cf62::t_221391f44e7dd9 52,63-68
+docs/plugin/dev.md
+  s_57fb45a488cf62::t_621dbb37bce1aa 15,17,19
+  s_57fb45a488cf62::t_db1668af2695d9 16
+docs/plugin/guide/command.md
+  s_57fb45a488cf62::t_847a846da33f0d 114-115,119-120
+  s_57fb45a488cf62::t_bd3a486f6042ff 23,116-117,123-125,130,132-141,151,155-163,172
+  s_57fb45a488cf62::t_848d13d78b2473 28-30,33-85,87,90-113,121,126-129,131,142-150,152,154
+  s_57fb45a488cf62::t_54af57f3f52012 118
+  s_57fb45a488cf62::t_d0f6f9a30c68cc 122
+packages/plugin/README.md
+  s_57fb45a488cf62::t_b3b03eacf0039f 48
+  s_57fb45a488cf62::t_97fae30bd422c9 6-8
+  s_57fb45a488cf62::t_9ed29752bc777b 19,28-35
+packages/plugin/src/command/command.ts
+  s_27111923b7ec5c::t_7dd54ece0f73dd 227-228
+packages/plugin/src/workspace.ts
+  s_8df352ff584802::t_829f42501b8df6 19,316
+packages/plugin/__tests__/command.test.ts
+  s_c65e265e5143ea::t_93f038f33593ac 61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ae638a0cbf9903c698331d82f61c8cb2531ef8f4",
+  "prompts": {},
+  "sessions": {
+    "s_27111923b7ec5c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_de7d100d1ffeRM9y9ZhPA9uja4",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_57fb45a488cf62": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_de7ac2237fferqXd74rfeGUrrs",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_8df352ff584802": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1b26a80bffe9GLF2SJBWWFG87",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_c65e265e5143ea": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_dec84648cffeu5Ac0l3rnT6NxI",
+        "model": "unknown"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
