@@ -58,7 +58,7 @@ describe('defineCommand', () => {
   });
 
   it('支持覆盖 name 并使用 execute', () => {
-    const [built] = defineCommand('echo <text>').name('say').execute(noopExecute).build();
+    const [built] = defineCommand('echo <text>').name('say').handler(noopExecute).build();
 
     expect(built!.name).toBe('say');
     expect(built!.execute).toBe(noopExecute);

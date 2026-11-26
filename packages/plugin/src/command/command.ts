@@ -222,15 +222,10 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
     return this;
   }
 
-  /** 设置命中后的执行函数 */
-  execute(execute: CommandExecute<M, C>): this {
-    this._execute = execute;
-    return this;
-  }
-
   /** `execute` 的 yargs 风格别名 */
   handler(handler: CommandExecute<M, C>): this {
-    return this.execute(handler);
+    this._execute = handler;
+    return this;
   }
 
   /** 追加一个子命令，返回父构建器以便继续链式调用 */

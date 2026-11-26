@@ -47,7 +47,8 @@ bot.on('message', (event: MessageEvent) => {
   任意代码。
 - `vm.runInContext` 默认 500ms 超时；`setTimeout` 延迟限制在 5000ms 以上。
 - 机器人 API、`setTimeout`、`fetch` 共用频率限制与异步递归深度限制。
-- `fetch` 默认 30 秒超时，响应体限制 500KB。
+- `fetch` 默认 30 秒超时，响应体限制 500KB；支持 `proxy` 配置（字符串或 `{ url, options }`），
+  但仍受超时、响应上限、频率与递归深度限制。
 - 上下文会持久化到 `data/context`、`data/context.fn`。
 
 ## 包边界

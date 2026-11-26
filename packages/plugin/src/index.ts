@@ -16,3 +16,4 @@ export type {
 } from './types/workspace';
 export type { Image, Part, Text } from './types/message-part';
 export { definePlugin } from './plugin';
+export { CommandBuilder, CommandDefinitionError, command, defineCommand } from './command/command';

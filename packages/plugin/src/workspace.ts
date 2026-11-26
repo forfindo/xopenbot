@@ -16,7 +16,7 @@ import type { Bot } from '@xopenbot/onebot';
 import { EventEmitter } from 'node:events';
 import { extraSubEvents } from '@/utils/event';
 import { match } from '@/command/matcher';
-import type { Arguments } from 'yargs-parser';
+import type { MatchArgs } from '@/types/matcher';
 
 const BOT_EVENTS = new Set(['message', 'request', 'notice', 'meta']);
 
@@ -313,7 +313,7 @@ export class Workspace {
     const initApis = mergeObject(...Object.values(this.apis));
     for (const command of this.commands) {
       input = input.trim();
-      let argv: Arguments | null = null;
+      let argv: MatchArgs | null = null;
       const result = command.pattern.find(item => (argv = match(item, input)));
       if (result) {
         const execRst = await command.execute(

@@ -9,7 +9,7 @@ outline: deep
 插件是一个实现了 `IPlugin` 的对象，推荐用 `definePlugin()` 创建：
 
 ```ts
-import { definePlugin } from '@xopenbot/plugin';
+import { defineCommand, definePlugin } from '@xopenbot/plugin';
 
 export const echoPlugin = definePlugin({
   info: {
@@ -19,26 +19,21 @@ export const echoPlugin = definePlugin({
   },
   // 不要标注返回类型，交给 definePlugin 依据 manifest 推断，ctx.bot 才能收窄
   loadCommand() {
-    return [
-      {
-        name: 'echo',
-        // 匹配到的片段会被截掉，剩余部分作为 execute 的 input
-        // pattern 未以 ^ 开头时会自动补上 ^（字符串与正则都适用）
-        pattern: /^echo\s*/i,
-        // 数字越小越先执行（全局按 priority 升序排列）
-        priority: 100,
-        execute(input) {
-          if (!input) {
-            return {
-              content: [{ type: 'text', text: '用法：echo <内容>' }]
-            };
-          }
+    return defineCommand('echo [text...]', '复读消息')
+      // 数字越小越先执行（全局按 priority 升序排列）
+      .priority(100)
+      .handler((input, ctx, args) => {
+        const text = (args.text as string[] | undefined)?.join(' ') ?? '';
+        if (!text) {
           return {
-            content: [{ type: 'text', text: input }]
+            content: [{ type: 'text', text: '用法：echo <内容>' }]
           };
         }
-      }
-    ];
+        return {
+          content: [{ type: 'text', text }]
+        };
+      })
+      .build();
   }
 });
 ```
@@ -54,7 +49,7 @@ export const echoPlugin = definePlugin({
 `{ plugin, config }` 传入，`Workspace` 会把配置注入该插件的 `ctx.config`：
 
 ```ts
-import { definePlugin } from '@xopenbot/plugin';
+import { defineCommand, definePlugin } from '@xopenbot/plugin';
 
 interface EchoConfig {
   prefix: string;
@@ -65,16 +60,12 @@ export const echoPlugin = definePlugin<EchoConfig>()({
   info: { name: 'echo', version: '1.0.0', description: '带配置的复读机' },
   loadCommand(ctx) {
     // ctx.config.prefix 已按 EchoConfig 收窄
-    return [
-      {
-        name: 'echo',
-        pattern: new RegExp(`^${ctx.config.prefix}echo\\s*`),
-        priority: 100,
-        execute(input) {
-          return { content: [{ type: 'text', text: input }] };
-        }
-      }
-    ];
+    return defineCommand<typeof ctx>(`${ctx.config.prefix}echo [text...]`, '带配置的复读机')
+      .handler((input, ctx, args) => {
+        const text = (args.text as string[] | undefined)?.join(' ') ?? '';
+        return { content: [{ type: 'text', text }] };
+      })
+      .build();
   }
 });
 

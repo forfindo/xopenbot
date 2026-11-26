@@ -12,7 +12,11 @@ packages/plugin
 │   ├── index.ts             # 包入口，统一导出
 │   ├── plugin.ts            # definePlugin 辅助函数
 │   ├── workspace.ts         # 插件工作区、命令注册与分发
+│   ├── command
+│   │   ├── command.ts       # defineCommand 构建器与 pattern 校验
+│   │   └── matcher.ts       # pattern 匹配与输入解析
 │   ├── types
+│   │   ├── matcher.ts       # 匹配结果与 pattern 结构类型
 │   │   ├── message-part.ts  # 消息段类型 Part
 │   │   └── workspace.ts     # Manifest、插件、命令、定时任务等类型定义
 │   └── utils

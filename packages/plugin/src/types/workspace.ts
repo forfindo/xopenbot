@@ -7,7 +7,7 @@ import type {
   NoticeEvent,
   RequestEvent
 } from '@xopenbot/onebot';
-import type { Arguments } from 'yargs-parser';
+import type { MatchArgs } from '@/types/matcher';
 
 type MaybePromise<T> = T | Promise<T>;
 type None = void | undefined | null;
@@ -51,7 +51,7 @@ export interface Command<M extends Manifest = Manifest, C = unknown> {
   execute: (
     input: string,
     ctx: PluginContext<M, C>,
-    args: Arguments
+    args: MatchArgs
   ) => MaybePromise<ExecResult | void | undefined | null>;
 }
 

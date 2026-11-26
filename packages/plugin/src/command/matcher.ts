@@ -173,7 +173,7 @@ export function match(pattern: string, input: string): MatchArgs | null {
     configuration: {
       'parse-positional-numbers': false
     }
-  });
+  }) as MatchArgs;
 
   const remaining = argv._.slice(0);
   const path: string[] = [];

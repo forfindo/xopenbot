@@ -3,9 +3,9 @@
 xopenbot 的插件工作区。负责插件的加载、命令注册、消息匹配与分发、定时任务调度，以及
 插件卸载。
 
-一个插件通过 `loadCommand()` 返回命令；命令由 `pattern` 匹配输入，由 `execute` 产出
-消息内容。`Workspace` 管理插件、命令、定时任务与插件私有状态，并支持通过 `init` 向
-命令上下文注入 API。
+一个插件通过 `loadCommand()` 返回命令；命令推荐用 `defineCommand` 构造器定义，由 `pattern`
+匹配输入，由 `execute` 产出消息内容。`Workspace` 管理插件、命令、定时任务与插件私有状态，
+并支持通过 `init` 向命令上下文注入 API。
 
 ## 安装
 
@@ -16,7 +16,7 @@ pnpm add @xopenbot/plugin
 ## 最小示例
 
 ```ts
-import { definePlugin, Workspace } from '@xopenbot/plugin';
+import { defineCommand, definePlugin, Workspace } from '@xopenbot/plugin';
 
 const echoPlugin = definePlugin({
   info: {
@@ -25,18 +25,14 @@ const echoPlugin = definePlugin({
     description: '复读机示例'
   },
   loadCommand() {
-    return [
-      {
-        name: 'echo',
-        pattern: /^echo\s*/i,
-        priority: 100,
-        execute(input) {
-          return {
-            content: [{ type: 'text', text: input || '用法：echo <内容>' }]
-          };
-        }
-      }
-    ];
+    return defineCommand('echo [text...]', '复读消息')
+      .handler((input, ctx, args) => {
+        const text = (args.text as string[] | undefined)?.join(' ') ?? '';
+        return {
+          content: [{ type: 'text', text: text || '用法：echo <内容>' }]
+        };
+      })
+      .build();
   }
 });
 
@@ -49,7 +45,7 @@ const outputs = await workspace.process('echo 你好', {});
 
 ## 核心能力
 
-- 命令：`pattern` 支持字符串或正则，按 `priority` 升序执行。
+- 命令：用 `defineCommand` 构造器定义，`build()` 生成 yargs 风格 `pattern` 数组，按 `priority` 升序执行。
 - 依赖声明：`info.manifest.depsOn` 声明所需的 Bot API，注册时校验并收窄 `ctx.bot`。
 - 插件上下文：`ctx` 提供 `logger`、`bot`、`state`、`config`、`emit`。
 - 插件配置：用 `definePlugin<Config>()({...})` 声明配置类型，`workspace.registry({ plugin, config })` 注册时注入 `ctx.config`。

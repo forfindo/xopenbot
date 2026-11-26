@@ -58,9 +58,10 @@ const configuredPlugin = definePlugin<EchoConfig>()({
     return defineCommand<typeof ctx>('X')
       .priority(1)
       .name('x')
-      .execute((_input, execCtx) => {
+      .handler((_input, execCtx, args) => {
         const execPrefix: string = execCtx.config.prefix;
         void execPrefix;
+        void args._;
         return { content: [{ type: 'text', text: execPrefix }] };
       })
       .build();

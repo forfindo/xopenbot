@@ -1,6 +1,12 @@
-import type yargsParser from 'yargs-parser';
-
-export type MatchArgs = ReturnType<typeof yargsParser>;
+export interface MatchArgs {
+  /** Non-option arguments */
+  _: Array<string>;
+  /** Arguments after the end-of-options flag `--` */
+  '--'?: Array<string | number>;
+  /** All remaining options */
+  // eslint-disable-next-line
+  [argName: string]: any;
+}
 
 export interface Positional {
   names: string[];

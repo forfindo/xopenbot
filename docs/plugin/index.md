@@ -41,7 +41,7 @@ pnpm add @xopenbot/plugin
 ## 快速开始
 
 ```ts
-import { Workspace, definePlugin } from '@xopenbot/plugin';
+import { Workspace, defineCommand, definePlugin } from '@xopenbot/plugin';
 
 const echoPlugin = definePlugin({
   info: {
@@ -50,16 +50,12 @@ const echoPlugin = definePlugin({
     description: '复读机示例'
   },
   loadCommand() {
-    return [
-      {
-        name: 'echo',
-        pattern: /^echo\s*/i,
-        priority: 100,
-        execute(input) {
-          return { content: [{ type: 'text', text: input }] };
-        }
-      }
-    ];
+    return defineCommand('echo [text...]', '复读消息')
+      .handler((input, ctx, args) => {
+        const text = (args.text as string[] | undefined)?.join(' ') ?? '';
+        return { content: [{ type: 'text', text }] };
+      })
+      .build();
   }
 });
 
