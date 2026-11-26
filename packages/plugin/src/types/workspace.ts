@@ -7,6 +7,7 @@ import type {
   NoticeEvent,
   RequestEvent
 } from '@xopenbot/onebot';
+import type { Arguments } from 'yargs-parser';
 
 type MaybePromise<T> = T | Promise<T>;
 type None = void | undefined | null;
@@ -42,14 +43,19 @@ export interface ScheduleTask {
 
 export interface Command<M extends Manifest = Manifest, C = unknown> {
   name: string;
-  pattern: string | RegExp;
+  /** 该命令的所有 pattern（命令名 + 别名组合） */
+  pattern: string[];
   priority: number;
+  /** 命令描述，仅用于文档/帮助展示 */
+  description?: string;
   execute: (
     input: string,
     ctx: PluginContext<M, C>,
-    args?: string[]
-  ) => MaybePromise<ExecResult | None>;
+    args: Arguments
+  ) => MaybePromise<ExecResult | void | undefined | null>;
 }
+
+export type CommandExecute<M extends Manifest, C> = Command<M, C>['execute'];
 
 // eslint-disable-next-line
 type AnyEvent = any;

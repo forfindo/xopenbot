@@ -15,6 +15,8 @@ import type {
 import type { Bot } from '@xopenbot/onebot';
 import { EventEmitter } from 'node:events';
 import { extraSubEvents } from '@/utils/event';
+import { match } from '@/command/matcher';
+import type { Arguments } from 'yargs-parser';
 
 const BOT_EVENTS = new Set(['message', 'request', 'notice', 'meta']);
 
@@ -231,7 +233,7 @@ export class Workspace {
       const commands = (await plugin.loadCommand(ctx)).map(item => ({
         plugin: name,
         ...item,
-        pattern: normalizePattern(item.pattern)
+        pattern: item.pattern
       }));
       const tasks = ((await plugin.loadSchedule?.(ctx)) ?? []).map(item => ({
         ...item,
@@ -310,11 +312,12 @@ export class Workspace {
     const processResult: ProcessResult[] = [];
     const initApis = mergeObject(...Object.values(this.apis));
     for (const command of this.commands) {
-      const result = input.match(command.pattern);
+      input = input.trim();
+      let argv: Arguments | null = null;
+      const result = command.pattern.find(item => (argv = match(item, input)));
       if (result) {
-        const prefix = result[0];
         const execRst = await command.execute(
-          input.substring(prefix.length).trim(),
+          input,
           {
             ...initApis,
             ...ctx,
@@ -324,7 +327,7 @@ export class Workspace {
             state: this.states[command.plugin] || {},
             config: this.configs[command.plugin]
           },
-          result.slice(1)
+          argv!
         );
         if (execRst?.content?.length) {
           processResult.push({
@@ -359,13 +362,6 @@ export class Workspace {
 
 function isPluginEntry(entry: Registrable): entry is PluginEntry {
   return typeof entry === 'object' && entry !== null && 'plugin' in entry;
-}
-
-function normalizePattern(pattern: string | RegExp): RegExp {
-  if (typeof pattern === 'string') {
-    return new RegExp(pattern.startsWith('^') ? pattern : '^' + pattern);
-  }
-  return pattern.source.startsWith('^') ? pattern : new RegExp('^' + pattern.source, pattern.flags);
 }
 
 function checkManifest(bot: Bot, info: PluginInfo<Manifest>) {

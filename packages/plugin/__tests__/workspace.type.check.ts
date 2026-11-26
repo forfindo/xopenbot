@@ -1,5 +1,6 @@
 import { Workspace } from '@/workspace';
 import { definePlugin } from '@/plugin';
+import { defineCommand } from '@/command/command';
 
 const workspace = new Workspace({
   uin: 'test',
@@ -54,18 +55,15 @@ const configuredPlugin = definePlugin<EchoConfig>()({
   loadCommand(ctx) {
     const prefix: string = ctx.config.prefix;
     void prefix;
-    return [
-      {
-        name: 'x',
-        pattern: '^x',
-        priority: 1,
-        execute(_input, execCtx) {
-          const execPrefix: string = execCtx.config.prefix;
-          void execPrefix;
-          return { content: [{ type: 'text', text: execPrefix }] };
-        }
-      }
-    ];
+    return defineCommand<typeof ctx>('X')
+      .priority(1)
+      .name('x')
+      .execute((_input, execCtx) => {
+        const execPrefix: string = execCtx.config.prefix;
+        void execPrefix;
+        return { content: [{ type: 'text', text: execPrefix }] };
+      })
+      .build();
   },
   loadListener(ctx) {
     const prefix: string = ctx.config.prefix;
@@ -102,7 +100,13 @@ await workspace.registry(
     loadCommand(ctx) {
       void ctx.bot.getChannelMemberList('def', 'fff');
       void ctx.bot.getChannelInfo?.('ff', 'ff');
-      return [];
+      return defineCommand<typeof ctx>('test')
+        .name('test')
+        .handler((_, ctx) => {
+          void ctx.bot.getChannelMemberList('gff', 'fff');
+          void ctx.bot.test;
+        })
+        .build();
     },
     info: {
       name: 'test',
@@ -110,12 +114,14 @@ await workspace.registry(
       description: 'ttestt',
       manifest: {
         depsOn: {
-          getChannelMemberList: 'function'
+          getChannelMemberList: 'function',
+          test: 'field'
         }
       }
     },
     init(ctx) {
       void ctx.bot.getChannelMemberList('fgg', 'fdg');
+      void ctx.bot.test;
       return {};
     }
   })

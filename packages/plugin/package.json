@@ -23,7 +23,12 @@
     "access": "public"
   },
   "dependencies": {
+    "@xopenbot/onebot": "workspace:*",
     "node-schedule": "2.1.2",
-    "@xopenbot/onebot": "workspace:*"
+    "shell-quote": "1.12.0",
+    "yargs-parser": "22.0.0"
+  },
+  "devDependencies": {
+    "@types/yargs-parser": "21.0.3"
   }
 }
