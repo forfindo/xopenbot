@@ -207,6 +207,68 @@ describe('defineCommand', () => {
     });
   });
 
+  describe('options', () => {
+    it('.option() 与 .options() 返回构建器自身', () => {
+      const builder = defineCommand('deploy <env>');
+      expect(builder.option('force')).toBe(builder);
+      expect(builder.options({ tag: { describe: '标签' } })).toBe(builder);
+    });
+
+    it('build 把选项写入 Command 并传播给子命令', () => {
+      const commands = defineCommand('deploy')
+        .option('force', { alias: 'f', type: 'boolean' })
+        .handler(noopExecute)
+        .command('prod <env>', '生产', noopExecute)
+        .build();
+
+      expect(commands[0]!.options).toMatchObject({ force: { alias: 'f', type: 'boolean' } });
+      expect(commands[1]!.options).toMatchObject({ force: { alias: 'f', type: 'boolean' } });
+    });
+
+    it('子命令同名选项覆盖父命令', () => {
+      const commands = defineCommand('cfg')
+        .option('verbose', { type: 'boolean' })
+        .command(defineCommand('get').option('verbose', { type: 'string' }).handler(noopExecute))
+        .build();
+
+      expect(commands[0]!.options).toMatchObject({ verbose: { type: 'string' } });
+    });
+
+    it('帮助文本按 yargs 风格列出选项并隐藏 hidden 项', async () => {
+      const text = await helpText(
+        defineCommand('deploy <env>', '部署')
+          .option('force', {
+            alias: 'f',
+            type: 'boolean',
+            describe: '强制部署',
+            default: false
+          })
+          .option('tag', {
+            type: 'string',
+            describe: '版本标签',
+            demandOption: true,
+            choices: ['dev', 'prod']
+          })
+          .option('secret', { hidden: true })
+          .help()
+          .handler(noopExecute)
+      );
+
+      expect(text).toBe(
+        [
+          'Usage: deploy <env> [options]',
+          '',
+          '部署',
+          '',
+          'Options:',
+          '  -f, --force  强制部署  [boolean] [default: false]',
+          '  --tag <value>  版本标签  [string] [required] [choices: "dev", "prod"]',
+          '  --help  显示帮助信息'
+        ].join('\n')
+      );
+    });
+  });
+
   describe('help', () => {
     it('.help() 返回构建器自身', () => {
       const builder = defineCommand('echo <text>');
@@ -428,10 +490,11 @@ describe('defineCommand', () => {
 
     it('example', () => {
       const commands = defineCommand('config', '配置管理')
-        .help()
+        .option('version', '版本')
         .command(
           defineCommand('user', '用户配置')
             .help()
+            .option('name', '用户姓名')
             .command('get <uid>', '获取用户配置', noopExecute)
             .command('list', '所用用户配置', noopExecute)
         );

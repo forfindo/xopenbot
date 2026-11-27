@@ -88,6 +88,42 @@ describe('match', () => {
     expect(result).toMatchObject({ a: '1', c: '2', b: '3' });
   });
 
+  describe('options', () => {
+    it('支持别名、类型与默认值', () => {
+      const result = match('cmd <x>', 'cmd hi -n 3', {
+        name: { alias: 'n', type: 'string' },
+        count: { alias: 'c', type: 'number', default: 1 }
+      });
+      expect(result).toMatchObject({ name: '3', n: '3', count: 1, c: 1 });
+    });
+
+    it('boolean 选项不吞位置参数', () => {
+      expect(
+        match('cmd <x>', 'cmd hi --verbose', { verbose: { alias: 'v', type: 'boolean' } })
+      ).toMatchObject({ x: 'hi', verbose: true, v: true });
+    });
+
+    it('array 选项收集多个值', () => {
+      expect(match('cmd [rest...]', 'cmd --tag a b', { tag: { type: 'array' } })).toMatchObject({
+        tag: ['a', 'b']
+      });
+    });
+
+    it('缺少必填选项时不匹配', () => {
+      expect(match('cmd', 'cmd', { token: { demandOption: true } })).toBeNull();
+      expect(match('cmd', 'cmd --token x', { token: { demandOption: true } })).toMatchObject({
+        token: 'x'
+      });
+    });
+
+    it('choices 校验不通过时不匹配', () => {
+      expect(match('cmd', 'cmd --mode a', { mode: { choices: ['a', 'b'] } })).toMatchObject({
+        mode: 'a'
+      });
+      expect(match('cmd', 'cmd --mode c', { mode: { choices: ['a', 'b'] } })).toBeNull();
+    });
+  });
+
   describe('子命令', () => {
     it('子命令路径进入 _', () => {
       const result = match('test sub1 <name> [age]', 'test sub1 alice 18');

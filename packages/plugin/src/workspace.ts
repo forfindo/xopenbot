@@ -314,7 +314,7 @@ export class Workspace {
     for (const command of this.commands) {
       input = input.trim();
       let argv: MatchArgs | null = null;
-      const result = command.pattern.find(item => (argv = match(item, input)));
+      const result = command.pattern.find(item => (argv = match(item, input, command.options)));
       if (result) {
         const execRst = await command.execute(
           input,

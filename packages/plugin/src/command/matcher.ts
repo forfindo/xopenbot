@@ -1,6 +1,12 @@
 import { parse } from 'shell-quote';
 import yargsParser from 'yargs-parser';
-import type { MatchArgs, ParsedCommand, Positional } from '@/types/matcher';
+import type {
+  CommandOption,
+  CommandOptions,
+  MatchArgs,
+  ParsedCommand,
+  Positional
+} from '@/types/matcher';
 
 const BRACKET_CHARS = /\.*[\][<>]/g;
 
@@ -124,6 +130,82 @@ function consume(
   return true;
 }
 
+function normalizeOptions(options: CommandOptions = {}): [string, CommandOption][] {
+  return Object.entries(options).map(([name, option]): [string, CommandOption] => [
+    name,
+    typeof option === 'string' ? { describe: option } : option
+  ]);
+}
+
+/** 把命令选项定义转换为 yargs-parser 的配置 **/
+function buildParserOptions(options: CommandOptions = {}) {
+  const alias: Record<string, string[]> = {};
+  const boolean: string[] = [];
+  const string: string[] = [];
+  const number: string[] = [];
+  const array: string[] = [];
+  const defaults: Record<string, unknown> = {};
+
+  for (const [name, option] of normalizeOptions(options)) {
+    if (option.alias) {
+      alias[name] = Array.isArray(option.alias) ? option.alias : [option.alias];
+    }
+    switch (option.type) {
+      case 'boolean':
+        boolean.push(name);
+        break;
+      case 'string':
+        string.push(name);
+        break;
+      case 'number':
+        number.push(name);
+        break;
+      case 'array':
+        array.push(name);
+        break;
+      default:
+        break;
+    }
+    if (option.default !== void 0) {
+      defaults[name] = option.default;
+    }
+  }
+
+  return {
+    alias,
+    boolean,
+    string,
+    number,
+    array,
+    default: defaults,
+    configuration: {
+      'parse-positional-numbers': false
+    }
+  };
+}
+
+/** 校验必填项与可选值；不满足时视为命令不匹配 **/
+function validateOptions(argv: MatchArgs, options: CommandOptions = {}): boolean {
+  for (const [name, option] of normalizeOptions(options)) {
+    const value: unknown = argv[name];
+    const missing = value === void 0 || (Array.isArray(value) && value.length === 0);
+
+    if (option.demandOption && missing) {
+      return false;
+    }
+    if (option.choices && !missing) {
+      const values = Array.isArray(value) ? value : [value];
+      const invalid = values.some(
+        item => !option.choices!.some(choice => choice === item || String(choice) === String(item))
+      );
+      if (invalid) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 /**
  * 按 pattern 匹配输入，返回解析后的 argv；不匹配返回 null。
  *
@@ -143,6 +225,8 @@ function consume(
  * - 用 shell-quote 处理引号、转义与 `#` 注释。
  * - 环境变量存在则替换，未定义则原样保留（如 `$0`、`$UNSET`）。
  * - 用 yargs-parser 解析 flags：`--key value` / `--flag` 写入 argv，位置参数进入 `_`。
+ * - 传入 `options` 时按其 `alias` / `type` / `default` 配置解析，并校验 `demandOption`
+ *   与 `choices`；校验不通过返回 `null`。
  *
  * ## 匹配规则
  * - 先按顺序匹配命令路径：裸词必须相等，`*` 吃掉任意一个 token。
@@ -165,15 +249,16 @@ function consume(
  *
  * @param pattern 命令模板
  * @param input 用户输入
+ * @param options 命令选项定义
  * @returns 匹配成功返回 argv（含 `_`），失败返回 null
  */
-export function match(pattern: string, input: string): MatchArgs | null {
+export function match(pattern: string, input: string, options?: CommandOptions): MatchArgs | null {
   const command = parseCommand(pattern);
-  const argv = yargsParser(shellParse(input.trim()), {
-    configuration: {
-      'parse-positional-numbers': false
-    }
-  }) as MatchArgs;
+  const argv = yargsParser(shellParse(input.trim()), buildParserOptions(options)) as MatchArgs;
+
+  if (!validateOptions(argv, options)) {
+    return null;
+  }
 
   const remaining = argv._.slice(0);
   const path: string[] = [];

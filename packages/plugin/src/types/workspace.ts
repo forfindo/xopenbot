@@ -7,7 +7,7 @@ import type {
   NoticeEvent,
   RequestEvent
 } from '@xopenbot/onebot';
-import type { MatchArgs } from '@/types/matcher';
+import type { CommandOptions, MatchArgs } from '@/types/matcher';
 
 type MaybePromise<T> = T | Promise<T>;
 type None = void | undefined | null;
@@ -48,6 +48,8 @@ export interface Command<M extends Manifest = Manifest, C = unknown> {
   priority: number;
   /** 命令描述，仅用于文档/帮助展示 */
   description?: string;
+  /** 命令选项定义，`match()` 会据此解析并校验 flag */
+  options?: CommandOptions;
   execute: (
     input: string,
     ctx: PluginContext<M, C>,

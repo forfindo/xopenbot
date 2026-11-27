@@ -1,5 +1,5 @@
 import type { Command, CommandExecute, Manifest, PluginContext } from '@/types/workspace';
-import type { MatchArgs } from '@/types/matcher';
+import type { CommandOption, CommandOptions, MatchArgs } from '@/types/matcher';
 
 /** 命令定义不合法时抛出，message 会指明具体不支持的格式 **/
 export class CommandDefinitionError extends Error {
@@ -167,6 +167,25 @@ function deriveName(command: string): string {
   return first.replace(/[<>[\]]/g, '') || command.trim();
 }
 
+function normalizeOption(option: CommandOption | string): CommandOption {
+  return typeof option === 'string' ? { describe: option } : option;
+}
+
+/** 选项在帮助文本中的值占位，布尔选项不占值 **/
+function optionPlaceholder(option: CommandOption): string {
+  if (option.type === 'boolean') {
+    return '';
+  }
+  return option.type === 'array' ? ' <value...>' : ' <value>';
+}
+
+function formatOptionValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(formatOptionValue).join(', ');
+  }
+  return typeof value === 'string' ? JSON.stringify(value) : String(value);
+}
+
 /**
  * yargs 风格的链式命令构建器。所有配置方法与 `.command()` 都返回 `this`，
  * `build()` 时校验并生成 `match()` 需要的 pattern，同时把子命令和别名展开为扁平数组。
@@ -193,6 +212,7 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
   private _aliases: string[] = [];
   private _priority = 100;
   private _help = false;
+  private _options: CommandOptions = {};
   private _execute?: CommandExecute<M, C>;
 
   constructor(command: string, aliases: string[] = []) {
@@ -227,6 +247,29 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
   /** 设置匹配优先级，数字越小越先执行 */
   priority(priority: number): this {
     this._priority = priority;
+    return this;
+  }
+
+  /**
+   * 声明一个命令选项，语义参考 yargs 的 `option()`。
+   *
+   * @example
+   * ```ts
+   * defineCommand('deploy <env>')
+   *   .option('force', { alias: 'f', type: 'boolean', describe: '强制部署' })
+   *   .option('tag', '指定版本标签');
+   * ```
+   */
+  option(name: string, option: CommandOption | string = {}): this {
+    this._options[name] = normalizeOption(option);
+    return this;
+  }
+
+  /** 批量声明命令选项，等价于多次调用 `option()`；同名选项后者覆盖前者 **/
+  options(options: CommandOptions): this {
+    for (const [name, option] of Object.entries(options)) {
+      this.option(name, option);
+    }
     return this;
   }
 
@@ -269,7 +312,7 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
   }
 
   /** 生成 yargs 风格的帮助文本 **/
-  private helpText(path: string[]): string {
+  private helpText(path: string[], options: CommandOptions): string {
     const tokens = tokenize(this.commandString.trim());
     const firstPositional = tokens.findIndex(isPositional);
     const pathTokens = firstPositional === -1 ? tokens : tokens.slice(0, firstPositional);
@@ -288,8 +331,47 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
     if (hasChildren) {
       lines.push('', 'Commands:', ...this.commandLines(selfPath));
     }
-    lines.push('', 'Options:', '  --help  显示帮助信息');
+    lines.push('', 'Options:', ...this.optionLines(options), '  --help  显示帮助信息');
     return lines.join('\n');
+  }
+
+  /** 按 yargs 风格把选项渲染为帮助行 **/
+  private optionLines(options: CommandOptions): string[] {
+    const lines: string[] = [];
+    for (const [name, raw] of Object.entries(options)) {
+      const option = normalizeOption(raw);
+      if (option.hidden) {
+        continue;
+      }
+
+      const aliases = option.alias
+        ? Array.isArray(option.alias)
+          ? option.alias
+          : [option.alias]
+        : [];
+      const flags = [
+        ...aliases.map(alias => (alias.length === 1 ? `-${alias}` : `--${alias}`)),
+        `--${name}${optionPlaceholder(option)}`
+      ].join(', ');
+
+      const meta: string[] = [];
+      if (option.type) {
+        meta.push(`[${option.type}]`);
+      }
+      if (option.demandOption) {
+        meta.push('[required]');
+      }
+      if (option.default !== void 0) {
+        meta.push(`[default: ${formatOptionValue(option.default)}]`);
+      }
+      if (option.choices?.length) {
+        meta.push(`[choices: ${option.choices.map(formatOptionValue).join(', ')}]`);
+      }
+
+      const description = [option.describe, meta.join(' ')].filter(Boolean).join('  ');
+      lines.push(description ? `  ${flags}  ${description}` : `  ${flags}`);
+    }
+    return lines;
   }
 
   /** 递归展开所有后代命令，按 yargs 风格以完整路径平铺展示 **/
@@ -310,12 +392,17 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
 
   /**
    * @param parentPathVariants 祖先命令路径的所有别名组合
+   * @param inheritedOptions 祖先命令声明、会传播给子命令的选项
    */
-  private collect(parentPathVariants: string[][]): Command<M, C>[] {
+  private collect(
+    parentPathVariants: string[][],
+    inheritedOptions: CommandOptions = {}
+  ): Command<M, C>[] {
     const tokens = tokenize(this.commandString.trim());
     const firstPositional = tokens.findIndex(isPositional);
     const pathTokens = firstPositional === -1 ? tokens : tokens.slice(0, firstPositional);
     const positionalTokens = firstPositional === -1 ? [] : tokens.slice(firstPositional);
+    const options: CommandOptions = { ...inheritedOptions, ...this._options };
 
     const [commandName = ''] = pathTokens;
     const restPath = pathTokens.slice(1);
@@ -343,13 +430,14 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
         description: this._description,
         pattern: unique(patterns),
         priority: this._priority,
+        ...(Object.keys(options).length > 0 ? { options } : {}),
         execute: (input: string, ctx: PluginContext<M, C>, args: MatchArgs) => {
           if (this._help && args.help) {
             return {
               content: [
                 {
                   type: 'text',
-                  text: this.helpText(parentPathVariants[0]!)
+                  text: this.helpText(parentPathVariants[0]!, options)
                 }
               ]
             };
@@ -362,7 +450,7 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
     }
 
     for (const child of this.children) {
-      result.push(...child.collect(childPathVariants));
+      result.push(...child.collect(childPathVariants, options));
     }
     return result;
   }

@@ -15,5 +15,6 @@ export type {
   Manifest
 } from './types/workspace';
 export type { Image, Part, Text } from './types/message-part';
+export type { CommandOption, CommandOptions, CommandOptionType, MatchArgs } from './types/matcher';
 export { definePlugin } from './plugin';
 export { CommandBuilder, CommandDefinitionError, command, defineCommand } from './command/command';
