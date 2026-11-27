@@ -1,0 +1,61 @@
+packages/plugin/src/workspace.ts
+  s_4df5eae17b4e47::t_225db9dfeb44a0 317
+packages/plugin/src/command/matcher.ts
+  s_4df5eae17b4e47::t_5f9d6007f4f54f 252,255,257-261
+  s_4df5eae17b4e47::t_e327948d6c6af6 228-229
+  s_4df5eae17b4e47::t_cdad311a752fef 3-9
+  s_4df5eae17b4e47::t_a019f3141a0702 133-189,191-208
+  s_4df5eae17b4e47::t_b62586449c1f64 190
+packages/plugin/__tests__/matcher.test.ts
+  s_4df5eae17b4e47::t_89b9263fd8ee34 91-126
+packages/plugin/src/index.ts
+  s_4df5eae17b4e47::t_f167235ce64a16 18
+packages/plugin/src/types/workspace.ts
+  s_4df5eae17b4e47::t_7736c4377215a6 10
+  s_4df5eae17b4e47::t_bcfe1c54548571 51-52
+packages/plugin/src/types/matcher.ts
+  s_4df5eae17b4e47::t_928e4403af6255 11-34
+packages/plugin/src/command/command.ts
+  s_4df5eae17b4e47::t_b00294ad762847 315,334,338-376
+  s_4df5eae17b4e47::t_5a862757ea0c46 170-188
+  s_4df5eae17b4e47::t_d25b18578af52b 253-275
+  s_4df5eae17b4e47::t_e9f2350110bc63 2
+  s_4df5eae17b4e47::t_979329fe53df68 215
+  s_4df5eae17b4e47::t_579e6be3fe7268 397-400
+  s_27111923b7ec5c::t_33c463525b65ee 395,405,433,440,453
+packages/plugin/__tests__/command.test.ts
+  s_4df5eae17b4e47::t_4e424a8794a623 210-271
+  s_c65e265e5143ea::t_ca050ebe9ebf1d 493,497
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "cbfdbee91c4e482a029457707280749d93eb3dd2",
+  "prompts": {},
+  "sessions": {
+    "s_27111923b7ec5c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_de7d100d1ffeRM9y9ZhPA9uja4",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_4df5eae17b4e47": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_de2e49a48ffeoVTuy70ETQ3q0y",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_c65e265e5143ea": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_dec84648cffeu5Ac0l3rnT6NxI",
+        "model": "unknown"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
