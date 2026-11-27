@@ -1,0 +1,57 @@
+packages/plugin/README.md
+  s_ad62184a059cdf::t_2c3669ed1875de 48
+docs/plugin/guide/command.md
+  s_4df5eae17b4e47::t_a390fec3ac9ea6 105-106
+  s_ad62184a059cdf::t_628e4e40103d3e 115
+  s_ad62184a059cdf::t_1cd50734ef5945 159
+  s_ad62184a059cdf::t_d95ce686152a46 107
+  s_ad62184a059cdf::t_5515b2dc9f10c6 215
+  s_4df5eae17b4e47::t_04101ed6c494d5 112-114,116-157
+  s_ad62184a059cdf::t_6a99214995aaa5 160-200
+  s_ad62184a059cdf::t_97af5fe22e4eeb 203
+  s_2c418f1d191e99::t_9f4498bf079cd4 158
+docs/plugin/reference/types.md
+  s_ad62184a059cdf::t_78f2ab0711e823 110-112
+  s_4df5eae17b4e47::t_3d459993363bf4 154-156
+  s_ad62184a059cdf::t_4b80c40096685e 84-98
+  s_ad62184a059cdf::t_4083a4f1f40be2 113
+  s_4df5eae17b4e47::t_bc9d42c6656ef4 49,61-62,66-82
+  s_ad62184a059cdf::t_ae251864e5fb01 39,48,53,60,64
+  s_2c418f1d191e99::t_b11c9abe2355ae 65,83
+docs/plugin/index.md
+  s_ad62184a059cdf::t_cfded568e6e594 11-13
+  s_ad62184a059cdf::t_30f0b4b1528abb 23
+  s_ad62184a059cdf::t_8602d7e2a4f039 69-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7c4439d8c14e4cc6418e67576dee91c36a22d096",
+  "prompts": {},
+  "sessions": {
+    "s_2c418f1d191e99": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e0c43b2b9ffejAo92lY2jpomTh",
+        "model": "unknown"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_4df5eae17b4e47": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_de2e49a48ffeoVTuy70ETQ3q0y",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_ad62184a059cdf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_de29e0329ffer20d50m3wHEHUb",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
