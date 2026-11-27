@@ -4,8 +4,8 @@ xopenbot 的插件工作区。负责插件的加载、命令注册、消息匹�
 插件卸载。
 
 一个插件通过 `loadCommand()` 返回命令；命令推荐用 `defineCommand` 构造器定义，由 `pattern`
-匹配输入，由 `execute` 产出消息内容。`Workspace` 管理插件、命令、定时任务与插件私有状态，
-并支持通过 `init` 向命令上下文注入 API。
+匹配输入，由 `.handler()` 设置的处理函数产出消息内容。`Workspace` 管理插件、命令、定时
+任务与插件私有状态，并支持通过 `init` 向命令上下文注入 API。
 
 ## 安装
 

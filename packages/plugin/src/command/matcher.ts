@@ -222,8 +222,8 @@ function validateOptions(argv: MatchArgs, options: CommandOptions = {}): boolean
  * - `$0` 没有特殊含义，按普通 token 处理。
  *
  * ## 输入解析
- * - 用 shell-quote 处理引号、转义与 `#` 注释。
- * - 环境变量存在则替换，未定义则原样保留（如 `$0`、`$UNSET`）。
+ * - 用 shell-quote 处理引号与转义；`#` 不作为注释，按普通字符保留。
+ * - `$VAR` 一律原样保留（如 `$0`、`$UNSET`），不读取环境变量做替换。
  * - 用 yargs-parser 解析 flags：`--key value` / `--flag` 写入 argv，位置参数进入 `_`。
  * - 传入 `options` 时按其 `alias` / `type` / `default` 配置解析，并校验 `demandOption`
  *   与 `choices`；校验不通过返回 `null`。

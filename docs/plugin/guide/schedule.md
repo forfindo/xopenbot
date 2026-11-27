@@ -7,6 +7,7 @@ outline: deep
 插件可以实现 `loadSchedule()` 返回要注册的定时任务，`cron` 使用标准 cron 表达式：
 
 ```ts
+import { Workspace } from '@xopenbot/plugin';
 import type { IPlugin, Manifest, ScheduleTask } from '@xopenbot/plugin';
 
 const reminderPlugin: IPlugin<Manifest> = {

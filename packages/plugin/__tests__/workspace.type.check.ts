@@ -45,7 +45,13 @@ const configuredPlugin = definePlugin<EchoConfig>()({
   info: {
     name: 'configured',
     version: '1.0.0',
-    description: 'typed config'
+    description: 'typed config',
+    manifest: {
+      depsOn: {
+        sendGroupMessage: 'function',
+        ttt: 'field'
+      }
+    }
   },
   init(ctx) {
     const prefix: string = ctx.config.prefix;
@@ -55,6 +61,9 @@ const configuredPlugin = definePlugin<EchoConfig>()({
   loadCommand(ctx) {
     const prefix: string = ctx.config.prefix;
     void prefix;
+    void ctx.bot.sendGroupMessage('ttt', []);
+    void ctx.bot.getChannelInfo?.('5rewr', 'dsfag');
+    void ctx.bot.ttt;
     return defineCommand<typeof ctx>('X')
       .priority(1)
       .name('x')
@@ -89,7 +98,7 @@ await workspace.registry({
 });
 
 // 缺少必填配置字段应在编译期报错
-// @ts-expect-error 缺少 prefix
+// @ts-expect-error 缺少必填配置字段 prefix
 await workspace.registry({
   plugin: configuredPlugin,
   config: {}

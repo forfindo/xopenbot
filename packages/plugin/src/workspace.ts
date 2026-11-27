@@ -33,7 +33,8 @@ type AnyPluginContext = PluginContext<any, any>;
 type PluginEntry = { plugin: AnyPlugin; config: unknown };
 type Registrable = AnyPlugin | PluginEntry;
 
-type ConfigOf<P> = P extends IPlugin<Manifest, infer C> ? C : unknown;
+// eslint-disable-next-line
+type ConfigOf<P> = P extends IPlugin<any, infer C> ? C : unknown;
 type ValidateEntries<E extends readonly Registrable[]> = {
   [K in keyof E]: E[K] extends { plugin: infer P extends AnyPlugin; config: infer C }
     ? C extends ConfigOf<P>

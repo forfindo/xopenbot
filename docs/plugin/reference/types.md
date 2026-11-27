@@ -60,8 +60,8 @@ interface Command<M extends Manifest = Manifest, C = unknown> {
 - `description` 可选，仅用于文档或帮助展示，不参与匹配；开启 `.help()` 后会出现在帮助中。
 - `options` 可选，键为选项名，值为 `CommandOption` 或描述字符串；详见
   [命令选项](/plugin/guide/command#命令选项)。
-- `execute` 的 `input` 是完整输入（已 trim），`args` 是 `yargs-parser` 解析后的
-  `MatchArgs`，包含 `_` 与具名位置参数、flag。
+- `execute` 经 `process` 调用时，`input` 是完整输入（已 trim），`args` 是 `yargs-parser`
+  解析后的 `MatchArgs`，包含 `_` 与具名位置参数、flag。
 
 ## CommandOption
 
@@ -108,7 +108,7 @@ function defineCommand<M extends Manifest = Manifest, C = unknown>(
 
 `command` 为字符串或数组（第一项为命令名，其余为别名）。返回的 `CommandBuilder` 提供
 `.name()`、`.describe()`、`.alias()`、`.priority()`、`.option()` / `.options()`、
-`.help()`、`.execute()` / `.handler()`、`.command()`、`.build()`，`build()` 返回
+`.help()`、`.handler()`、`.command()`、`.build()`，`build()` 返回
 `Command[]`。用法见 [用构造器定义命令](/plugin/guide/command#用构造器定义命令) 与
 [帮助](/plugin/guide/command#帮助)。
 
@@ -158,6 +158,7 @@ interface ScheduleTask {
 | `ProcessResult` | 命令处理结果 |
 | `RegistryResult` | 插件注册结果 |
 | `ScheduleTask` | 定时任务定义 |
-| `Listener<M>` / `ListenerCallback<M>` | 事件监听定义 |
+| `Listener<M, C>` / `ListenerCallback<M, T, C>` | 事件监听定义 |
+| `ListenerCallbackInfo<M, C>` | 监听注册信息（回调、内部包装函数与插件名） |
 | `Part` / `Text` / `Image` | 消息段类型 |
 | `LikeLogger` | 兼容 `console` / `bot.logger` 的日志接口 |

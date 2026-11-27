@@ -23,13 +23,18 @@ loadListener() {
 ```
 
 内置事件 `message` / `request` / `notice` / `meta` 会监听 bot 的对应事件；其余事件名
-注册在工作区事件总线上，可通过 `ctx.emit` 派发：
+注册在工作区事件总线上，可通过 `ctx.emit` 派发。内置事件要求 bot 同时实现 `on` 与
+`off`，缺少任一方法时会跳过挂载并记录一条警告。
+
+派发自定义事件的示例如下：
 
 ```ts
-execute(input, ctx) {
-  ctx.emit('my.custom', { input });
-  return { content: [{ type: 'text', text: '已派发' }] };
-}
+defineCommand('ping')
+  .handler((input, ctx) => {
+    ctx.emit('my.custom', { input });
+    return { content: [{ type: 'text', text: '已派发' }] };
+  })
+  .build();
 ```
 
 内置事件的 `ctx.event` 会按事件类型收窄（`message` 为 `MessageEvent`，`request` 为
@@ -51,14 +56,14 @@ execute(input, ctx) {
 ## Listener 类型
 
 ```ts
-type ListenerCallback<M extends Manifest, T = any> = (
-  ctx: PluginContext<M> & { event: T }
+type ListenerCallback<M extends Manifest, T = any, C = unknown> = (
+  ctx: PluginContext<M, C> & { event: T }
 ) => MaybePromise<void | undefined | null>;
 
-type Listener<M extends Manifest> = {
-  message?: ListenerCallback<M, MessageEvent> | ListenerCallback<M, MessageEvent>[];
-  request?: ListenerCallback<M, RequestEvent> | ListenerCallback<M, RequestEvent>[];
-  notice?: ListenerCallback<M, NoticeEvent> | ListenerCallback<M, NoticeEvent>[];
-  meta?: ListenerCallback<M, MetaEvent> | ListenerCallback<M, MetaEvent>[];
-} & Record<string, ListenerCallback<M> | ListenerCallback<M>[]>;
+type Listener<M extends Manifest, C = unknown> = {
+  message?: ListenerCallback<M, MessageEvent, C> | ListenerCallback<M, MessageEvent, C>[];
+  request?: ListenerCallback<M, RequestEvent, C> | ListenerCallback<M, RequestEvent, C>[];
+  notice?: ListenerCallback<M, NoticeEvent, C> | ListenerCallback<M, NoticeEvent, C>[];
+  meta?: ListenerCallback<M, MetaEvent, C> | ListenerCallback<M, MetaEvent, C>[];
+} & Record<string, ListenerCallback<M, any, C> | ListenerCallback<M, any, C>[]>;
 ```

@@ -11,7 +11,7 @@ outline: deep
 | --- | --- | --- |
 | `logger` | `LikeLogger` | 工作区注入的日志对象 |
 | `bot` | `BotImpl<manifest.depsOn>` | 构造 `Workspace` 时传入的 bot 实例；`depsOn` 中声明过的成员会变为必选 |
-| `state` | `Record<string, unknown>` | 该插件专属的状态对象，跨命令/定时任务持久，重复注册同名插件会重置 |
+| `state` | `Record<string, unknown>` | 该插件专属的状态对象，跨命令、定时任务与监听回调持久，同名插件成功重新注册时会重置 |
 | `config` | `C` | 注册该插件时传入的配置，类型由 `definePlugin<C>()` 声明，缺省为 `unknown` |
 | `emit` | `(event: string, ...args: unknown[]) => void` | 向工作区事件总线派发事件 |
 | `event` | 仅监听回调中存在 | 当前事件数据 |
@@ -19,12 +19,12 @@ outline: deep
 ```ts
 loadCommand(ctx) {
   ctx.state.count = 0;   // 初始化状态
-  return [...];
-}
-
-execute(input, ctx) {
-  ctx.state.count += 1;
-  return { content: [{ type: 'text', text: `已执行 ${ctx.state.count} 次` }] };
+  return defineCommand('count')
+    .handler((input, ctx) => {
+      ctx.state.count += 1;
+      return { content: [{ type: 'text', text: `已执行 ${ctx.state.count} 次` }] };
+    })
+    .build();
 }
 ```
 
@@ -63,7 +63,7 @@ await workspace.registry({ plugin: echoPlugin, config: { prefix: '!' } });
 
 插件可以定义 `init(ctx)` 返回一些 API，这些 API 会合并进所有插件命令 `execute` 时的
 `ctx`。合并顺序为：`init` API → `process` 传入的额外上下文 → 工作区保留字段
-（`logger` / `bot` / `emit` / `state`），后者会覆盖前者：
+（`logger` / `bot` / `emit` / `state` / `config`），后者会覆盖前者：
 
 ```ts
 init(ctx) {

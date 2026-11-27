@@ -7,8 +7,9 @@ outline: deep
 xopenbot 的插件工作区。负责插件的加载、命令注册、消息匹配与分发、定时任务调度，以及
 插件卸载。
 
-一个插件通过 `loadCommand()` 返回若干条命令；命令由 `pattern` 匹配输入，由 `execute`
-产出消息内容，并可用 `.option()` 声明 flag、用 `.help()` 启用内置 `--help`。
+一个插件通过 `loadCommand()` 返回若干条命令；命令由 `pattern` 匹配输入，由 `.handler()`
+设置的处理函数（即 `Command.execute`）产出消息内容，并可用 `.option()` 声明 flag、用
+`.help()` 启用内置 `--help`。
 `Workspace` 是一个类，需要先 `new` 出一个实例；一个实例管理一组插件、命令、定时任务
 与插件私有状态，并支持 `init` 向命令上下文注入 API。
 

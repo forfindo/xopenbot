@@ -17,7 +17,7 @@ export const echoPlugin = definePlugin({
     version: '1.0.0',
     description: '复读机示例'
   },
-  // 不要标注返回类型，交给 definePlugin 依据 manifest 推断，ctx.bot 才能收窄
+  // 让 definePlugin 推断返回类型；手写 Command[] 会退化为 Command<Manifest>，与收窄后的 M 冲突
   loadCommand() {
     return defineCommand('echo [text...]', '复读消息')
       // 数字越小越先执行（全局按 priority 升序排列）
@@ -79,7 +79,7 @@ await workspace.registry({
 - 不声明配置类型时 `ctx.config` 为 `unknown`；`definePlugin({...})` 的旧写法不变。
 - 不传配置时 `ctx.config` 为 `undefined`，需要必填配置的插件应使用
   `definePlugin<Config>()`。
-- 同名插件重复注册会把 `config` 重置为最新一次传入的值。
+- 同名插件成功注册时会把 `config` 重置为最新一次传入的值。
 - `config` 注册后视为只读，修改需用新值重新 `registry`（会重建该插件的 `state`、定时
   任务与监听）；运行期可变项请用 `ctx.state`。
 - `registry` 也支持混用：`workspace.registry(echoPlugin, { plugin: other, config })`。
@@ -123,9 +123,9 @@ export const noticePlugin = definePlugin({
 - 不写 `manifest` 时，`M` 会退化为 `Manifest`，`ctx.bot` 上所有标准成员都会被当作必选，
   扩展成员会被当作函数；但运行时不会做依赖检查，仍需自行保证 bot 实现了它们。需要精确
   控制类型时请显式声明 `manifest.depsOn`。
-- 注册时 `Workspace` 会遍历 `depsOn`，bot 上缺少对应成员会抛出错误，该插件加载失败并
-  记录到 `result.failure`，其他插件不受影响。声明依赖意味着你在类型上信任运行时 bot
-  一定实现了它。
+- 注册时 `Workspace` 会遍历 `depsOn`，bot 上缺少对应成员会判定为加载失败，错误记录到
+  `result.failure`，其他插件不受影响。声明依赖意味着你在类型上信任运行时 bot 一定实现了
+  它。
 - 如果 manifest 不内联，请用 `satisfies` 而不是类型标注，否则字面量类型会被拓宽，
   `ctx.bot` 的收窄会失效：
 

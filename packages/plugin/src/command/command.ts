@@ -232,7 +232,7 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
     return this;
   }
 
-  /** 开启 `--help`：自动注册一条帮助命令，展示该命令的用法 **/
+  /** 开启内置 `--help`：命中时返回帮助文本；没有 handler 时单独注册帮助命令 **/
   help(): this {
     this._help = true;
     return this;
