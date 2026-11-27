@@ -1,0 +1,14 @@
+packages/plugin/package.json
+  h_7037025082b470 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a1d4308711a7fa82eadb6ae40f22c7334552e7b7",
+  "prompts": {},
+  "humans": {
+    "h_7037025082b470": {
+      "author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
