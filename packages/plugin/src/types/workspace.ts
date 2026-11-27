@@ -52,7 +52,7 @@ export interface Command<M extends Manifest = Manifest, C = unknown> {
     input: string,
     ctx: PluginContext<M, C>,
     args: MatchArgs
-  ) => MaybePromise<ExecResult | void | undefined | null>;
+  ) => MaybePromise<ExecResult | None>;
 }
 
 export type CommandExecute<M extends Manifest, C> = Command<M, C>['execute'];

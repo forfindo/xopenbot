@@ -1,4 +1,5 @@
 import type { Command, CommandExecute, Manifest, PluginContext } from '@/types/workspace';
+import type { MatchArgs } from '@/types/matcher';
 
 /** 命令定义不合法时抛出，message 会指明具体不支持的格式 **/
 export class CommandDefinitionError extends Error {
@@ -191,6 +192,7 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
   private _description?: string;
   private _aliases: string[] = [];
   private _priority = 100;
+  private _help = false;
   private _execute?: CommandExecute<M, C>;
 
   constructor(command: string, aliases: string[] = []) {
@@ -207,6 +209,12 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
   /** 设置命令描述 */
   describe(description: string): this {
     this._description = description;
+    return this;
+  }
+
+  /** 开启 `--help`：自动注册一条帮助命令，展示该命令的用法 **/
+  help(): this {
+    this._help = true;
     return this;
   }
 
@@ -260,6 +268,46 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
     return this.collect([[]]);
   }
 
+  /** 生成 yargs 风格的帮助文本 **/
+  private helpText(path: string[]): string {
+    const tokens = tokenize(this.commandString.trim());
+    const firstPositional = tokens.findIndex(isPositional);
+    const pathTokens = firstPositional === -1 ? tokens : tokens.slice(0, firstPositional);
+    const positionalTokens = firstPositional === -1 ? [] : tokens.slice(firstPositional);
+    const selfPath = [...path, ...pathTokens];
+    const hasChildren = this.children.length > 0;
+    const usage = [...selfPath, ...(hasChildren ? ['<command>'] : positionalTokens)]
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const lines = [`Usage: ${usage} [options]`.replace(/\s+/g, ' ').trim()];
+
+    if (this._description) {
+      lines.push('', this._description);
+    }
+    if (hasChildren) {
+      lines.push('', 'Commands:', ...this.commandLines(selfPath));
+    }
+    lines.push('', 'Options:', '  --help  显示帮助信息');
+    return lines.join('\n');
+  }
+
+  /** 递归展开所有后代命令，按 yargs 风格以完整路径平铺展示 **/
+  private commandLines(prefix: string[]): string[] {
+    const lines: string[] = [];
+    for (const child of this.children) {
+      const tokens = tokenize(child.commandString.trim());
+      const firstPositional = tokens.findIndex(isPositional);
+      const childPathTokens = firstPositional === -1 ? tokens : tokens.slice(0, firstPositional);
+      const command = [...prefix, ...tokens].join(' ').replace(/\s+/g, ' ').trim();
+      lines.push(child._description ? `  ${command}  ${child._description}` : `  ${command}`);
+      if (child.children.length > 0) {
+        lines.push(...child.commandLines([...prefix, ...childPathTokens]));
+      }
+    }
+    return lines;
+  }
+
   /**
    * @param parentPathVariants 祖先命令路径的所有别名组合
    */
@@ -289,13 +337,25 @@ export class CommandBuilder<M extends Manifest = Manifest, C = unknown> {
       }
     }
 
-    if (this._execute) {
+    if (this._execute || this._help) {
       result.push({
         name: this._name ?? deriveName(this.commandString),
         description: this._description,
         pattern: unique(patterns),
         priority: this._priority,
-        execute: this._execute
+        execute: (input: string, ctx: PluginContext<M, C>, args: MatchArgs) => {
+          if (this._help && args.help) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: this.helpText(parentPathVariants[0]!)
+                }
+              ]
+            };
+          }
+          return this._execute?.(input, ctx, args);
+        }
       });
     } else if (!this.children.length) {
       throw new CommandDefinitionError(`命令 "${this.commandString}" 缺少 execute/handler`);
