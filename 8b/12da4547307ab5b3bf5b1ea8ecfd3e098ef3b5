@@ -1,0 +1,79 @@
+docs/plugin/index.md
+  s_c6c03ff1e5a358::t_c84386b43f5c99 10-12
+packages/plugin/src/workspace.ts
+  s_d4f08ff0435318::t_2b0b9158813cef 37
+  s_8df352ff584802::t_b1c71350c607a9 36
+docs/plugin/guide/context.md
+  s_c6c03ff1e5a358::t_5c8b71e7384ee3 14
+  s_c6c03ff1e5a358::t_10f609a9a4b801 22-27
+  s_c6c03ff1e5a358::t_1858769893c4e7 66
+docs/plugin/guide/schedule.md
+  s_c6c03ff1e5a358::t_05cc8baf9e372a 10
+packages/plugin/README.md
+  s_c6c03ff1e5a358::t_585bc47b1ae03d 7-8
+docs/plugin/reference/types.md
+  s_c6c03ff1e5a358::t_1d1b2d5f6a52ed 63-64
+  s_c6c03ff1e5a358::t_3e1be0249ad101 111
+  s_c6c03ff1e5a358::t_94a9e6dbbe658a 162
+  s_c6c03ff1e5a358::t_609a9e3faa8904 161
+docs/plugin/reference/workspace.md
+  s_c6c03ff1e5a358::t_eab37e46196893 19
+docs/plugin/guide/plugin.md
+  s_c6c03ff1e5a358::t_ee62166acd5749 20
+  s_c6c03ff1e5a358::t_90110613731df7 82
+  s_c6c03ff1e5a358::t_ef217d0c7c7b7a 126-128
+packages/plugin/src/command/matcher.ts
+  s_c6c03ff1e5a358::t_fe5b19559745ef 225-226
+packages/plugin/src/command/command.ts
+  s_c6c03ff1e5a358::t_43ca84897733ac 235
+docs/plugin/guide/command.md
+  s_c6c03ff1e5a358::t_ca63bbbb37ef03 205-206
+  s_c6c03ff1e5a358::t_2e0bcce0ea179c 109
+  s_c6c03ff1e5a358::t_abe38bd3aac6c0 90-91,94-95
+  s_c6c03ff1e5a358::t_745d6d6697c611 197-198
+  s_c6c03ff1e5a358::t_138b7ad3efc19e 162-163
+  s_c6c03ff1e5a358::t_f4132a078230af 221
+  s_c6c03ff1e5a358::t_773cdfe0598613 51-52
+  s_c6c03ff1e5a358::t_1b2d6738409f7f 238-239
+  s_c6c03ff1e5a358::t_97f38d4f15538d 249-250
+  s_c6c03ff1e5a358::t_fec289728d4cb3 256-258
+  s_c6c03ff1e5a358::t_cc6140e17b9570 269-272
+docs/plugin/guide/listener.md
+  s_c6c03ff1e5a358::t_6f95ebc36c2a8e 26-27
+  s_c6c03ff1e5a358::t_8b7aa116403e8b 32-37
+  s_c6c03ff1e5a358::t_1446c719db94ca 59-60,63-68
+  s_c6c03ff1e5a358::t_410b54c51c362e 29
+  s_c6c03ff1e5a358::t_a00d5756732df4 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8b12da4547307ab5b3bf5b1ea8ecfd3e098ef3b5",
+  "prompts": {},
+  "sessions": {
+    "s_8df352ff584802": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1b26a80bffe9GLF2SJBWWFG87",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_c6c03ff1e5a358": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_de26b539bffe1DUtAk1QqoTGFW",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_d4f08ff0435318": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_de27ce764ffeuiXAztu5f0yr8Z",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
