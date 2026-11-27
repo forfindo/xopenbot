@@ -102,13 +102,105 @@ export const configCommands = defineCommand(['config', 'cfg'], '配置管理')
 | `.describe(description)` | 设置命令描述，仅用于文档/帮助展示 |
 | `.alias(...aliases)` | 追加命令别名 |
 | `.priority(priority)` | 设置优先级，默认 `100`，数字越小越先执行 |
+| `.option(name, option?)` | 声明一个选项；`option` 可传配置对象或直接传描述字符串 |
+| `.options(options)` | 批量声明选项，等价于多次调用 `.option()`，同名后者覆盖前者 |
+| `.help()` | 开启内置 `--help` 帮助 |
 | `.execute(fn)` / `.handler(fn)` | 设置命中后的执行函数 |
 | `.command(child \| command, describe?, handler?)` | 追加子命令，返回父构建器以便链式调用 |
 | `.build()` | 校验命令字符串并返回扁平的 `Command[]` |
 
+## 命令选项
+
+参考 yargs 的 `option()`，用 `.option()` / `.options()` 声明 flag。声明后会写入
+`Command.options`，命令匹配时据此配置 yargs-parser，并在帮助文本中展示：
+
+```ts
+defineCommand('deploy <env>', '部署')
+  .option('force', {
+    alias: 'f',
+    type: 'boolean',
+    describe: '强制部署'
+  })
+  .options({
+    tag: { type: 'string', describe: '版本标签', demandOption: true },
+    mode: { type: 'string', choices: ['dev', 'prod'], default: 'dev' }
+  })
+  .handler((input, ctx, args) => {
+    // deploy prod -f --tag v1 --mode prod
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `${args.env} ${args.force} ${args.tag} ${args.mode}`
+        }
+      ]
+    };
+  });
+```
+
+`CommandOption` 支持的字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `alias` | 选项别名，`string \| string[]`；命中后每个别名都会写入 `args` |
+| `describe` | 帮助文本中的说明；`.option(name, '说明')` 是它的简写 |
+| `type` | `'string' \| 'number' \| 'boolean' \| 'array'`，缺省由 yargs-parser 推断 |
+| `default` | 默认值；未传入时也会写入 `args` |
+| `demandOption` | 是否必填；为 `true` 或字符串时生效，缺失视为不匹配 |
+| `choices` | 允许的取值；命中范围外的值视为不匹配 |
+| `hidden` | 为 `true` 时不出现在帮助文本中 |
+
+- 父命令声明的选项会传播给所有子命令，子命令同名选项会覆盖父命令；帮助文本展示合并后的
+  选项。
+- 启用 `.help()` 后，选项按 yargs 风格列为 `-f, --force  说明  [boolean] [default: false]`。
+- 声明 `type: 'boolean'` 的选项不会消费后面的位置参数；`type: 'array'` 会收集后续值。
+- `demandOption` 或 `choices` 校验失败时该 pattern 不匹配，工作区会继续尝试后续命令。
+
+## 帮助
+
+调用 `.help()` 开启内置帮助。命令匹配成功且 `args.help` 为真时，`execute` 不会调用
+handler，而是返回一段 yargs 风格的帮助文本：
+
+```ts
+defineCommand('deploy <env>', '部署')
+  .option('force', { alias: 'f', type: 'boolean', describe: '强制部署', default: false })
+  .option('tag', { type: 'string', describe: '版本标签' })
+  .help()
+  .handler((input, ctx, args) => {
+    // ...
+  });
+```
+
+输入 `deploy prod --help` 时，`content[0].text` 为：
+
+```text
+Usage: deploy <env> [options]
+
+部署
+
+Options:
+  -f, --force  强制部署  [boolean] [default: false]
+  --tag <value>  版本标签  [string]
+  --help  显示帮助信息
+```
+
+- 帮助文本依次包含 `Usage`、可选描述、子命令列表 `Commands`（递归平铺完整路径）和选项
+  列表 `Options`；`Options` 末尾总会附带 `--help`。
+- 选项按 `-别名, --名称 <value>` 渲染：布尔选项没有值占位，`array` 为 `<value...>`；
+  `[type]`、`[required]`、`[default: ...]`、`[choices: ...]` 依次附在描述之后，
+  `hidden: true` 的选项不会出现在帮助中。
+- 帮助中的命令路径使用规范写法（`defineCommand` 数组的第一项），与实际输入的别名无关；
+  `Commands` 也只展示子命令的规范写法，不展开别名。
+- `.help()` 不会传播给子命令，需要帮助的子命令请各自调用；父命令声明的选项仍会传播。
+- 可以在没有 handler 的情况下单独使用 `.help()`：此时只注册一条处理 `--help` 的命令，
+  普通输入不产出内容；有子命令但没有 handler 时，父命令也会注册一条帮助命令。
+- `--help` 只是 flag，不会填充位置参数。包含必选位置参数或 `demandOption` 选项的命令
+  需要同时满足匹配条件（如 `deploy prod --help` 且必填选项齐全）才会触发帮助，否则会
+  像普通输入一样不匹配。
+
 ## execute 参数
 
-`execute` / `handler` 的第三个参数是 `yargs-parser` 解析后的 `Arguments`：
+`execute` / `handler` 的第三个参数是 `yargs-parser` 解析后的 `MatchArgs`：
 
 ```ts
 defineCommand('set <key> <value>')
@@ -120,7 +212,7 @@ defineCommand('set <key> <value>')
   .build();
 ```
 
-`Arguments` 总是包含 `_`（命令路径与未消费的位置参数）。具名位置参数与 `--flag` 按名字
+`MatchArgs` 总是包含 `_`（命令路径与未消费的位置参数）。具名位置参数与 `--flag` 按名字
 写入；`--key value` 与 `--flag` 都会被解析，位置参数不会因为形如数字而被转成 `number`。
 
 `execute` 的第一个参数始终是本次 `process` 收到的完整输入（已 trim），不是剔除命令名后

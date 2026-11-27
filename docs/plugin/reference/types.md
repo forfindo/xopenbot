@@ -36,7 +36,7 @@ interface PluginInfo<M extends Manifest> {
 ## Command
 
 ```ts
-import type { Arguments } from 'yargs-parser';
+import type { MatchArgs } from '@xopenbot/plugin';
 
 interface Command<M extends Manifest = Manifest, C = unknown> {
   name: string;
@@ -45,19 +45,57 @@ interface Command<M extends Manifest = Manifest, C = unknown> {
   priority: number;
   /** 命令描述，仅用于文档/帮助展示 */
   description?: string;
+  /** 命令选项定义，命令匹配时据此解析并校验 flag */
+  options?: CommandOptions;
   execute: (
     input: string,
     ctx: PluginContext<M, C>,
-    args: Arguments
+    args: MatchArgs
   ) => MaybePromise<ExecResult | void | undefined | null>;
 }
 ```
 
 - `pattern` 是 yargs 风格模板的数组，一个元素对应一种命令名、别名或子命令写法；匹配时
   按数组顺序取第一个命中的模板。模板语法见[命令匹配规则](/plugin/guide/command#pattern-语法)。
-- `description` 可选，仅用于文档或帮助展示，不参与匹配。
+- `description` 可选，仅用于文档或帮助展示，不参与匹配；开启 `.help()` 后会出现在帮助中。
+- `options` 可选，键为选项名，值为 `CommandOption` 或描述字符串；详见
+  [命令选项](/plugin/guide/command#命令选项)。
 - `execute` 的 `input` 是完整输入（已 trim），`args` 是 `yargs-parser` 解析后的
-  `Arguments`，包含 `_` 与具名位置参数、flag。
+  `MatchArgs`，包含 `_` 与具名位置参数、flag。
+
+## CommandOption
+
+```ts
+type CommandOptionType = 'string' | 'number' | 'boolean' | 'array';
+
+interface CommandOption {
+  alias?: string | string[];
+  describe?: string;
+  type?: CommandOptionType;
+  default?: unknown;
+  demandOption?: boolean | string;
+  choices?: readonly (string | number)[];
+  hidden?: boolean;
+}
+
+type CommandOptions = Record<string, CommandOption | string>;
+```
+
+## MatchArgs
+
+```ts
+interface MatchArgs {
+  /** 命令路径与未消费的位置参数 */
+  _: Array<string>;
+  /** `--` 之后的参数 */
+  '--'?: Array<string | number>;
+  /** 具名位置参数与所有 flag */
+  [argName: string]: any;
+}
+```
+
+`MatchArgs` 即 `yargs-parser` 的解析结果。具名位置参数、`--flag` 以及 `.help()` 识别
+到的 `help` 都按名字写入；详见 [execute 参数](/plugin/guide/command#execute-参数)。
 
 ## defineCommand
 
@@ -69,9 +107,10 @@ function defineCommand<M extends Manifest = Manifest, C = unknown>(
 ```
 
 `command` 为字符串或数组（第一项为命令名，其余为别名）。返回的 `CommandBuilder` 提供
-`.name()`、`.describe()`、`.alias()`、`.priority()`、`.execute()` / `.handler()`、
-`.command()`、`.build()`，`build()` 返回 `Command[]`。用法见
-[用构造器定义命令](/plugin/guide/command#用构造器定义命令)。
+`.name()`、`.describe()`、`.alias()`、`.priority()`、`.option()` / `.options()`、
+`.help()`、`.execute()` / `.handler()`、`.command()`、`.build()`，`build()` 返回
+`Command[]`。用法见 [用构造器定义命令](/plugin/guide/command#用构造器定义命令) 与
+[帮助](/plugin/guide/command#帮助)。
 
 - `command` 是 `defineCommand` 的别名。
 - 在插件内可传 `defineCommand<typeof ctx>(...)`，让 `M` / `C` 从 `ctx` 推导。
@@ -112,6 +151,9 @@ interface ScheduleTask {
 | `PluginInfo<M>` | 插件基本信息 |
 | `PluginContext<M, C>` | 插件上下文，包含 `config: C` |
 | `Command<M, C>` | 命令定义 |
+| `CommandOption` / `CommandOptions` | 命令选项定义与映射 |
+| `CommandOptionType` | 命令选项值类型 |
+| `MatchArgs` | 命令匹配后的 `yargs-parser` 参数 |
 | `ExecResult` | 命令执行结果 |
 | `ProcessResult` | 命令处理结果 |
 | `RegistryResult` | 插件注册结果 |

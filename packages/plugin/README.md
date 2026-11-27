@@ -45,7 +45,7 @@ const outputs = await workspace.process('echo 你好', {});
 
 ## 核心能力
 
-- 命令：用 `defineCommand` 构造器定义，`build()` 生成 yargs 风格 `pattern` 数组，按 `priority` 升序执行。
+- 命令：用 `defineCommand` 构造器定义，`build()` 生成 yargs 风格 `pattern` 数组，按 `priority` 升序执行；`.option()` / `.options()` 声明 flag 的别名、类型、默认值与校验规则，`.help()` 启用内置 `--help`。
 - 依赖声明：`info.manifest.depsOn` 声明所需的 Bot API，注册时校验并收窄 `ctx.bot`。
 - 插件上下文：`ctx` 提供 `logger`、`bot`、`state`、`config`、`emit`。
 - 插件配置：用 `definePlugin<Config>()({...})` 声明配置类型，`workspace.registry({ plugin, config })` 注册时注入 `ctx.config`。
