@@ -1,0 +1,66 @@
+packages/plugin/src/command/command.ts
+  s_ef63771a618398::t_7ef206d9dbfe6a 353
+  s_b50dd0f96269c1::t_f8f1b3989196b6 275,277,279,289,293-308
+  s_ef63771a618398::t_26ecc358783dc8 195
+  s_ef63771a618398::t_e04c59414c0875 215-220
+  s_ef63771a618398::t_aacbdc8dee41fe 271-274,276,278,280-288,290-292,309-310
+  s_b50dd0f96269c1::t_6aab8e5a738217 340,357
+  s_27111923b7ec5c::t_b48a6b47937f62 2,346-352,354-356,358
+packages/plugin/__tests__/command.test.ts
+  s_b50dd0f96269c1::t_3b7a6302d9f16c 98
+  s_b50dd0f96269c1::t_ca98b8a740c898 370
+  s_b50dd0f96269c1::t_52f457c3faca9c 237
+  s_b50dd0f96269c1::t_e10f0ab86a91cc 332,337
+  s_b50dd0f96269c1::t_0ad7835f922751 386
+  s_b50dd0f96269c1::t_82f5c8b6690ee7 271,276-314
+  s_b50dd0f96269c1::t_c9a50f44de5501 86
+  s_b50dd0f96269c1::t_0dfed64d28ee69 209-226,228-236,238-244,246-270,272-275,315-326,328-331,333-336,338-369,371-385,387-391,403-404,406-409,418,423-431
+  s_b50dd0f96269c1::t_5772ab54629fa3 245
+  s_b50dd0f96269c1::t_84a8704d001573 227
+  s_b50dd0f96269c1::t_794eb4f6f759b6 419-421
+  s_b50dd0f96269c1::t_a5f8e7e1de1839 327
+  s_b50dd0f96269c1::t_d1125900dd70b4 1,3-5,8-26
+  s_b50dd0f96269c1::t_24ad1a818133ee 392-402,405,410-417,422
+  s_b50dd0f96269c1::t_4193a79e05239c 432-434
+  s_c65e265e5143ea::t_b377e648020cd9 435-443
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "83973e1c948d788b95b64a30c9b910d9e7765779",
+  "prompts": {},
+  "sessions": {
+    "s_27111923b7ec5c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_de7d100d1ffeRM9y9ZhPA9uja4",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_b50dd0f96269c1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_de31a1c3effeoY5CAaiETsQLZJ",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_c65e265e5143ea": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_dec84648cffeu5Ac0l3rnT6NxI",
+        "model": "unknown"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_ef63771a618398": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_de777fa37ffeymyRcxfi8Zf9WG",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
