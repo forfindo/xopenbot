@@ -67,9 +67,14 @@ export class Workspace {
     return <T, R>(acquire: AcquireCallback<T>, release: ReleaseCallback<R>) => {
       const entry = acquire();
       if (entry instanceof Promise) {
+        const bucket = this.resources[pluginName];
         entry
           .then((item: R) => {
-            (this.resources[pluginName] ??= []).push(() => release(item));
+            if (this.resources[pluginName] === bucket) {
+              (this.resources[pluginName] ??= []).push(() => release(item));
+            } else {
+              release(item);
+            }
           })
           .catch(() => {});
       } else {
@@ -244,12 +249,20 @@ export class Workspace {
   private async load(plugin: AnyPlugin, config: unknown) {
     const name = plugin.info.name;
     const resources: (() => void)[] = [];
+    let committed = false;
+    let released = false;
     const acquireRelease = <T, R>(acquire: AcquireCallback<T>, release: ReleaseCallback<R>) => {
       const entry = acquire();
       if (entry instanceof Promise) {
         entry
           .then((item: R) => {
-            resources.push(() => release(item));
+            // 异步 acquire 在本次加载已回收（失败或已卸载）后 resolve 时直接释放，
+            // 避免回调被推入不再被回收的资源数组造成泄漏
+            if (released || (committed && this.resources[name] !== resources)) {
+              release(item);
+            } else {
+              resources.push(() => release(item));
+            }
           })
           .catch(() => {});
       } else {
@@ -285,6 +298,7 @@ export class Workspace {
       // —— 提交阶段：下面全是无抛错的纯内存操作 ——
       this.deregister(name);
       this.resources[name] = resources;
+      committed = true;
       this.states[name] = state;
       this.configs[name] = config;
       if (apis) {
@@ -326,6 +340,7 @@ export class Workspace {
       }
     } catch (e) {
       // 加载失败时回收本次已创建的资源，避免泄漏
+      released = true;
       if (this.resources[name] === resources) {
         this.releaseResources(name);
       } else {
