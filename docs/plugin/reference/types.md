@@ -149,7 +149,8 @@ interface ScheduleTask {
 | `IPlugin<M, C>` | 插件接口，`C` 为配置类型 |
 | `Manifest` | 依赖声明，包含 `depsOn: BotAPIOptions` |
 | `PluginInfo<M>` | 插件基本信息 |
-| `PluginContext<M, C>` | 插件上下文，包含 `config: C` |
+| `PluginContext<M, C>` | 插件上下文，包含 `config: C` 与 `acquireRelease` 资源登记方法 |
+| `AcquireCallback<T>` / `ReleaseCallback<T>` | `acquireRelease` 的资源创建与释放回调类型 |
 | `Command<M, C>` | 命令定义 |
 | `CommandOption` / `CommandOptions` | 命令选项定义与映射 |
 | `CommandOptionType` | 命令选项值类型 |

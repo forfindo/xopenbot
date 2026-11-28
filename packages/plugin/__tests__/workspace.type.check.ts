@@ -56,6 +56,10 @@ const configuredPlugin = definePlugin<EchoConfig>()({
   init(ctx) {
     const prefix: string = ctx.config.prefix;
     void prefix;
+    ctx.acquireRelease(
+      () => setInterval(() => console.log('running...'), 2500),
+      conn => clearInterval(conn)
+    );
     return {};
   },
   loadCommand(ctx) {

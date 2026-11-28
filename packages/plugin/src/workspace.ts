@@ -1,16 +1,22 @@
 import { mergeObject } from '@/utils/object';
 import { cancelJob, type Job, scheduleJob } from 'node-schedule';
 import type {
-  Command,
-  IPlugin,
+  AcquireCallback,
+  AnyCommand,
+  AnyListenerInfo,
+  AnyPlugin,
+  AnyPluginContext,
+  AnyPluginInfo,
   LikeLogger,
-  ListenerCallbackInfo,
   Manifest,
-  PluginContext,
+  PluginEntry,
   PluginInfo,
   ProcessResult,
+  Registrable,
   RegistryResult,
-  ScheduleTask
+  ReleaseCallback,
+  ScheduleTask,
+  ValidateEntries
 } from '@/types/workspace';
 import type { Bot } from '@xopenbot/onebot';
 import { EventEmitter } from 'node:events';
@@ -20,40 +26,21 @@ import type { MatchArgs } from '@/types/matcher';
 
 const BOT_EVENTS = new Set(['message', 'request', 'notice', 'meta']);
 
-// Workspace 不在编译期校验插件泛型，依赖由 checkManifest 在运行时校验
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type AnyPlugin = IPlugin<any, any>;
-type AnyCommand = Command<any, any>;
-type AnyPluginInfo = PluginInfo<any>;
-type AnyListenerInfo = ListenerCallbackInfo<any, any>;
-type AnyPluginContext = PluginContext<any, any>;
-/* eslint-enable @typescript-eslint/no-explicit-any */
-
-/** 插件对象或带配置的注册项 **/
-type PluginEntry = { plugin: AnyPlugin; config: unknown };
-type Registrable = AnyPlugin | PluginEntry;
-
-// eslint-disable-next-line
-type ConfigOf<P> = P extends IPlugin<any, infer C> ? C : unknown;
-type ValidateEntries<E extends readonly Registrable[]> = {
-  [K in keyof E]: E[K] extends { plugin: infer P extends AnyPlugin; config: infer C }
-    ? C extends ConfigOf<P>
-      ? E[K]
-      : { plugin: P; config: ConfigOf<P> }
-    : E[K];
-};
-
 export class Workspace {
   private plugins: (AnyPluginInfo & { loadTime: number })[] = [];
   private commands: (AnyCommand & { plugin: string })[] = [];
   /** 根据插件名字 **/
   private apis: { [key: string]: { [key: string]: unknown } } = {};
+  /** apis 合并结果缓存，apis 变更时置空重算 **/
+  private mergedApis: Record<string, unknown> | null = null;
   /** 定时任务列表 **/
   private tasks: (ScheduleTask & { plugin: string })[] = [];
   private runningTask: Job[] = [];
   private states: Record<string, Record<string, unknown>> = {};
   private configs: Record<string, unknown> = {};
   private listeners: Record<string, AnyListenerInfo[]> = {};
+  /** 每个插件通过 acquireRelease 登记的资源释放回调，deregister 时统一执行 **/
+  private resources: Record<string, (() => void)[]> = {};
   private readonly logger: LikeLogger;
   private readonly bot: Bot;
   private emitter: EventEmitter = new EventEmitter();
@@ -74,6 +61,35 @@ export class Workspace {
     this.logger.error(
       `插件 ${pluginName} 处理事件 ${event} 时出错：${error instanceof Error ? error.message : String(error)}`
     );
+  }
+
+  private createAcquireRelease(pluginName: string) {
+    return <T>(acquire: AcquireCallback<T>, release: ReleaseCallback<T>) => {
+      const entry = acquire();
+      (this.resources[pluginName] ??= []).push(() => release(entry));
+      return entry;
+    };
+  }
+
+  private releaseCallbacks(pluginName: string, callbacks: (() => void)[]) {
+    for (let i = callbacks.length - 1; i >= 0; i--) {
+      try {
+        callbacks[i]!();
+      } catch (error) {
+        this.logger.error(
+          `插件 ${pluginName} 释放资源失败：${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+  }
+
+  private releaseResources(pluginName: string) {
+    const callbacks = this.resources[pluginName];
+    if (!callbacks) {
+      return;
+    }
+    Reflect.deleteProperty(this.resources, pluginName);
+    this.releaseCallbacks(pluginName, callbacks);
   }
 
   private addSchedule(task: (typeof this.tasks)[number]) {
@@ -126,7 +142,8 @@ export class Workspace {
         bot: this.bot,
         emit: this.emit,
         state: this.states[name] || {},
-        config: this.configs[name]
+        config: this.configs[name],
+        acquireRelease: this.createAcquireRelease(name)
       } satisfies AnyPluginContext;
 
       for (const cbInfo of targets) {
@@ -218,6 +235,12 @@ export class Workspace {
 
   private async load(plugin: AnyPlugin, config: unknown) {
     const name = plugin.info.name;
+    const resources: (() => void)[] = [];
+    const acquireRelease = <T>(acquire: AcquireCallback<T>, release: ReleaseCallback<T>) => {
+      const entry = acquire();
+      resources.push(() => release(entry));
+      return entry;
+    };
     try {
       // —— 准备阶段：只计算、不碰 this.*，任何抛错都安全 ——
       checkManifest(this.bot, plugin.info as PluginInfo<Manifest>);
@@ -227,7 +250,8 @@ export class Workspace {
         bot: this.bot,
         emit: this.emit,
         state,
-        config
+        config,
+        acquireRelease
       };
 
       const apis = await plugin.init?.(ctx);
@@ -244,10 +268,12 @@ export class Workspace {
 
       // —— 提交阶段：下面全是无抛错的纯内存操作 ——
       this.deregister(name);
+      this.resources[name] = resources;
       this.states[name] = state;
       this.configs[name] = config;
       if (apis) {
         this.apis[name] = apis;
+        this.mergedApis = null;
       }
       this.plugins.push({
         ...plugin.info,
@@ -283,6 +309,12 @@ export class Workspace {
         this.listen(name);
       }
     } catch (e) {
+      // 加载失败时回收本次已创建的资源，避免泄漏
+      if (this.resources[name] === resources) {
+        this.releaseResources(name);
+      } else {
+        this.releaseCallbacks(name, resources);
+      }
       this.logger.warn(`插件 ${name} 加载失败，reason：${String(e)}`);
       return {
         name,
@@ -311,7 +343,7 @@ export class Workspace {
 
   async process(input: string, ctx: { [key: string]: unknown }) {
     const processResult: ProcessResult[] = [];
-    const initApis = mergeObject(...Object.values(this.apis));
+    const initApis = (this.mergedApis ??= mergeObject(...Object.values(this.apis)));
     for (const command of this.commands) {
       input = input.trim();
       let argv: MatchArgs | null = null;
@@ -326,7 +358,8 @@ export class Workspace {
             bot: this.bot,
             emit: this.emit,
             state: this.states[command.plugin] || {},
-            config: this.configs[command.plugin]
+            config: this.configs[command.plugin],
+            acquireRelease: this.createAcquireRelease(command.plugin)
           },
           argv!
         );
@@ -351,9 +384,12 @@ export class Workspace {
     const removed = this.tasks.filter(item => item.plugin === pluginName);
     removed.forEach(item => this.cancelSchedule(item));
     Reflect.deleteProperty(this.apis, pluginName);
+    this.mergedApis = null;
     Reflect.deleteProperty(this.states, pluginName);
     Reflect.deleteProperty(this.configs, pluginName);
     this.cancelListen(pluginName);
+    // 回收插件创建的资源
+    this.releaseResources(pluginName);
   }
 
   listPlugin() {

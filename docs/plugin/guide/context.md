@@ -14,6 +14,7 @@ outline: deep
 | `state` | `Record<string, unknown>` | 该插件专属的状态对象，跨命令、定时任务与监听回调持久，同名插件成功重新注册时会重置 |
 | `config` | `C` | 注册该插件时传入的配置，类型由 `definePlugin<C>()` 声明，缺省为 `unknown` |
 | `emit` | `(event: string, ...args: unknown[]) => void` | 向工作区事件总线派发事件 |
+| `acquireRelease` | `<T>(acquire: () => T, release: (r: T) => void) => T` | 登记随插件卸载释放的资源；`acquire` 立即执行并返回其结果 |
 | `event` | 仅监听回调中存在 | 当前事件数据 |
 
 ```ts
@@ -58,6 +59,27 @@ await workspace.registry({ plugin: echoPlugin, config: { prefix: '!' } });
 `config` 在注册后视为只读：它与一次注册绑定，工作区不会在运行中替换。需要修改配置时
 用新 `config` 重新 `registry`（会重建该插件的 `state`、定时任务与监听）；运行期需要可变
 的开关/参数请放进 `ctx.state`。
+
+## acquireRelease
+
+`ctx.acquireRelease(acquire, release)` 用于登记插件生命周期内创建的资源。`acquire`
+会立即执行并返回结果，`release` 会在该插件被 `deregister`（包括同名插件重新 `registry`
+时的旧实例卸载）时按登记顺序的逆序执行：
+
+```ts
+init(ctx) {
+  const timer = ctx.acquireRelease(
+    () => setInterval(() => ctx.logger.info('tick'), 1000),
+    id => clearInterval(id)
+  );
+  void timer;
+  return {};
+}
+```
+
+资源在注册阶段的 `init` / `loadCommand` / `loadSchedule` / `loadListener`，以及运行期的
+命令 `execute`、监听回调中都可通过 `ctx.acquireRelease` 登记。同名插件重新注册时，先释放
+旧实例的资源，再接管新实例的资源；本次加载失败时，本次已创建的资源会被立即释放。
 
 ## init
 

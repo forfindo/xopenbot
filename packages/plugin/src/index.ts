@@ -1,5 +1,6 @@
 export { Workspace } from './workspace';
 export type {
+  AcquireCallback,
   Command,
   ExecResult,
   IPlugin,
@@ -11,6 +12,7 @@ export type {
   PluginContext,
   ProcessResult,
   RegistryResult,
+  ReleaseCallback,
   ScheduleTask,
   Manifest
 } from './types/workspace';

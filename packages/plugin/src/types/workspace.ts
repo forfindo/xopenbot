@@ -13,6 +13,31 @@ type MaybePromise<T> = T | Promise<T>;
 type None = void | undefined | null;
 type IsAny<T> = 0 extends 1 & T ? true : false;
 
+// Workspace 不在编译期校验插件泛型，依赖由 checkManifest 在运行时校验
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export type AnyPlugin = IPlugin<any, any>;
+export type AnyCommand = Command<any, any>;
+export type AnyPluginInfo = PluginInfo<any>;
+export type AnyListenerInfo = ListenerCallbackInfo<any, any>;
+export type AnyPluginContext = PluginContext<any, any>;
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+/** 插件对象或带配置的注册项 **/
+export type PluginEntry = { plugin: AnyPlugin; config: unknown };
+export type Registrable = AnyPlugin | PluginEntry;
+
+// eslint-disable-next-line
+export type ConfigOf<P> = P extends IPlugin<any, infer C> ? C : unknown;
+export type ValidateEntries<E extends readonly Registrable[]> = {
+  [K in keyof E]: E[K] extends { plugin: infer P extends AnyPlugin; config: infer C }
+    ? C extends ConfigOf<P>
+      ? E[K]
+      : { plugin: P; config: ConfigOf<P> }
+    : E[K];
+};
+export type AcquireCallback<T> = () => T;
+export type ReleaseCallback<T> = (r: T) => void;
+
 // eslint-disable-next-line
 type AnyBot = any;
 
@@ -99,6 +124,8 @@ export interface PluginContext<M extends Manifest = Manifest, C = unknown> {
   /** 注册该插件时传入的配置，注册后视为只读；修改需重新注册，运行期可变项用 state **/
   config: C;
   emit: (event: string, ...args: unknown[]) => void;
+  /** 登记需要随插件卸载（deregister）一起释放的资源，返回 acquire 创建的值 **/
+  acquireRelease: <T>(acquire: AcquireCallback<T>, release: ReleaseCallback<T>) => T;
   [key: string]: unknown;
 }
 
