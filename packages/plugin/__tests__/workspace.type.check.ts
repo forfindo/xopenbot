@@ -53,11 +53,11 @@ const configuredPlugin = definePlugin<EchoConfig>()({
       }
     }
   },
-  init(ctx) {
+  async init(ctx) {
     const prefix: string = ctx.config.prefix;
     void prefix;
-    ctx.acquireRelease(
-      () => setInterval(() => console.log('running...'), 2500),
+    await ctx.acquireRelease(
+      async () => await Promise.resolve(setInterval(() => console.log('running...'), 2500)),
       conn => clearInterval(conn)
     );
     return {};

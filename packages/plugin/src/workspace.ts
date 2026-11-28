@@ -64,9 +64,17 @@ export class Workspace {
   }
 
   private createAcquireRelease(pluginName: string) {
-    return <T>(acquire: AcquireCallback<T>, release: ReleaseCallback<T>) => {
+    return <T, R>(acquire: AcquireCallback<T>, release: ReleaseCallback<R>) => {
       const entry = acquire();
-      (this.resources[pluginName] ??= []).push(() => release(entry));
+      if (entry instanceof Promise) {
+        entry
+          .then((item: R) => {
+            (this.resources[pluginName] ??= []).push(() => release(item));
+          })
+          .catch(() => {});
+      } else {
+        (this.resources[pluginName] ??= []).push(() => release(entry as unknown as R));
+      }
       return entry;
     };
   }
@@ -236,9 +244,17 @@ export class Workspace {
   private async load(plugin: AnyPlugin, config: unknown) {
     const name = plugin.info.name;
     const resources: (() => void)[] = [];
-    const acquireRelease = <T>(acquire: AcquireCallback<T>, release: ReleaseCallback<T>) => {
+    const acquireRelease = <T, R>(acquire: AcquireCallback<T>, release: ReleaseCallback<R>) => {
       const entry = acquire();
-      resources.push(() => release(entry));
+      if (entry instanceof Promise) {
+        entry
+          .then((item: R) => {
+            resources.push(() => release(item));
+          })
+          .catch(() => {});
+      } else {
+        resources.push(() => release(entry as unknown as R));
+      }
       return entry;
     };
     try {

@@ -125,7 +125,10 @@ export interface PluginContext<M extends Manifest = Manifest, C = unknown> {
   config: C;
   emit: (event: string, ...args: unknown[]) => void;
   /** 登记需要随插件卸载（deregister）一起释放的资源，返回 acquire 创建的值 **/
-  acquireRelease: <T>(acquire: AcquireCallback<T>, release: ReleaseCallback<T>) => T;
+  acquireRelease: <T, R = T extends Promise<unknown> ? Awaited<T> : T>(
+    acquire: AcquireCallback<T>,
+    release: ReleaseCallback<R>
+  ) => T;
   [key: string]: unknown;
 }
 
