@@ -1,0 +1,19 @@
+packages/plugin/src/workspace.ts
+  s_085cb16b01f255::t_f12cde3acab93c 67,69-77,247,249-257
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "78353eb67bd71c033b6592144567b7a73e73d4c3",
+  "prompts": {},
+  "sessions": {
+    "s_085cb16b01f255": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ddd91ee34ffeNVCAxhwhsQ4z3z",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
