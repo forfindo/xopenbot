@@ -67,22 +67,3 @@ const outputs = await workspace.process('echo 你好', {});
 ```
 
 完整的编写步骤见 [编写插件](/plugin/guide/plugin)。
-
-## 文档基线
-
-`docs/plugin` 下的页面已同步到提交 `cbfdbee`（`feat(plugin): 新增命令option`，
-2026-11-27）。本次相对上一次文档基线覆盖的变更为：
-
-| 提交 | 内容 |
-| --- | --- |
-| `ea842a3` | 插件配置：`definePlugin<C>()` 与 `registry({ plugin, config })` |
-| `b47aded` | 命令匹配改为 yargs 风格：`pattern` 数组、子命令与别名展开 |
-| `83973e1` | 内置帮助：`.help()` 与 `--help` |
-| `cbfdbee` | 命令选项：`.option()` / `.options()`、`CommandOption` |
-
-下次增量更新从该提交之后开始：
-
-```bash
-git log cbfdbee..HEAD --oneline -- packages/plugin
-git diff cbfdbee..HEAD -- packages/plugin/src
-```
