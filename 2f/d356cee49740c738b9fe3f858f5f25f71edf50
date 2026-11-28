@@ -1,0 +1,63 @@
+packages/plugin/__tests__/workspace.type.check.ts
+  s_9eb9502c4c1945::t_7917facc4586d0 60-62
+  s_9eb9502c4c1945::t_91c7e24e5ea61a 59
+docs/plugin/reference/workspace.md
+  s_9eb9502c4c1945::t_dfd2fcdeb32a01 18
+docs/plugin/guide/context.md
+  s_9eb9502c4c1945::t_583936c5d1c77b 17
+  s_9eb9502c4c1945::t_f78c73421c2acb 63-83
+packages/plugin/src/index.ts
+  s_9eb9502c4c1945::t_d0cad372f51a40 3,15
+packages/plugin/src/types/workspace.ts
+  s_9eb9502c4c1945::t_31917a3c59cc5f 127-128
+  s_9eb9502c4c1945::t_1610b84a12a367 16-40
+packages/plugin/src/workspace.ts
+  s_350042db93c4d5::t_f199593dedcbab 346
+  s_9eb9502c4c1945::t_be9573283c7763 392
+  s_350042db93c4d5::t_1ae07d13fb7222 276
+  s_350042db93c4d5::t_1fc3d5c1beb531 387
+  s_9eb9502c4c1945::t_d6a77b620aaf38 42-43
+  s_9eb9502c4c1945::t_8c1c8545866e8b 362
+  s_9eb9502c4c1945::t_65419118a85488 238-243,253-254
+  s_9eb9502c4c1945::t_1d920cd849254d 271
+  s_350042db93c4d5::t_02d782c281bbe7 34-35
+  s_9eb9502c4c1945::t_6571c7e79507af 66-94
+  s_9eb9502c4c1945::t_b190ed54c553fd 146
+  s_9eb9502c4c1945::t_23592e8af319f6 312-317
+  s_8df352ff584802::t_9688651dd0911b 4-9,12,15,17-19,145,361,391
+docs/plugin/reference/types.md
+  s_9eb9502c4c1945::t_8a88764c3ebacf 152
+  s_9eb9502c4c1945::t_966aedf12ed2c7 153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2fd356cee49740c738b9fe3f858f5f25f71edf50",
+  "prompts": {},
+  "sessions": {
+    "s_350042db93c4d5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_dde02966affeMitDZpBhRWzQcB",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_8df352ff584802": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e1b26a80bffe9GLF2SJBWWFG87",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    },
+    "s_9eb9502c4c1945": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_dddda405bffebrlNr7rj9B4yf1",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
