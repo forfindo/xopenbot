@@ -1,0 +1,19 @@
+AGENTS.md
+  s_9eb9502c4c1945::t_56292772d3894f 28-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "a6b3fe4cf78a4fb575af2c8d71594870d2b8ae65",
+  "prompts": {},
+  "sessions": {
+    "s_9eb9502c4c1945": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_dddda405bffebrlNr7rj9B4yf1",
+        "model": "deepseek-flash"
+      },
+      "human_author": "forfindo <3530766280@qq.com>"
+    }
+  }
+}
